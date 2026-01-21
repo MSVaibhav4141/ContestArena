@@ -1,6 +1,8 @@
 import Image, { type ImageProps } from "next/image";
 import { Button } from "@repo/ui/button";
 import styles from "./page.module.css";
+import { signIn, signOut } from "../auth";
+import { auth } from "../auth";
 
 type Props = Omit<ImageProps, "src"> & {
   srcLight: string;
@@ -18,7 +20,8 @@ const ThemeImage = (props: Props) => {
   );
 };
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth();
   return (
     <div className={styles.page}>
       <main className={styles.main}>
@@ -63,6 +66,26 @@ export default function Home() {
             Read our docs
           </a>
         </div>
+        {session?.user ?<div>
+          {session.user.name}
+          {session.user.email}
+          <form action={async() => {
+          'use server'
+          await signOut({redirectTo:'/'})
+        }}>
+                  <button type="submit">Logout</button>
+
+        </form>
+          </div>
+          :
+          <form action={async() => {
+          'use server'
+          await signIn('google', {redirectTo:"/"})
+        }}>
+        <button type="submit">Login</button>
+        </form>
+         }
+  
         <Button appName="web" className={styles.secondary}>
           Open alert
         </Button>
