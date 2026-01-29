@@ -2,25 +2,65 @@ import { CPP_TYPE_MAP, JS_TYPE_MAP, RUST_TYPE_MAP, ScalarType, Schema, Structura
 import fs from "fs";
 import path, { join } from "path";
 
-function generateBoilerPlate(language : 'CPP' | 'JS' | 'RUST', schemPath:string){
-    const mapper = {
-        'CPP': CPP_TYPE_MAP,
-        'JS' : JS_TYPE_MAP,
-        'RUST': RUST_TYPE_MAP
+type BaseType = "int" | "long" | "double" | "bool" | "char" | "string"
+type SpecialType = "TreeNode" | "ListNode"
+
+type ParamType =
+  | BaseType
+  | SpecialType
+  | `${BaseType}[]`
+  | `${BaseType}[][]`
+
+interface InputParam {
+  id: string
+  name: string
+  type: ParamType
+}
+
+interface ProblemPayload {
+  name: string,
+  description:string,
+  inputs: InputParam[]
+  output: { type: ParamType }
+}
+
+const mapper = {
+    'CPP': CPP_TYPE_MAP,
+    'JS' : JS_TYPE_MAP,
+    'RUST': RUST_TYPE_MAP
+}
+
+export function generateBoilerPlate(schemPath:string, schema ?:ProblemPayload){
+
+    let isSchema = schema;
+
+    if(schemPath){
+      if(!fs.existsSync(join(__dirname, schemPath,'Structure.json'))){
+        return false
+      }
+        const structure = fs.readFileSync(join(__dirname, schemPath,'Structure.json'), 'utf-8')
+        isSchema = JSON.parse(structure) as ProblemPayload;
+      }
+
+    if(!isSchema){
+      return false;
     }
+    const languages = ['CPP','RUST','JS'] as const;
+      const allStartCode = languages.map((language, index) => {  
+        const langType = mapper[language]      
+       const params = generateParams(isSchema, language, langType)
 
-    const langType = mapper[language]
+       const startCode = buildBoilerPlate(language, langType, isSchema,params)
+        return {code: startCode,
+          languageId: index + 1
+        }
+      })
+      return allStartCode;
+}
 
-    if(!langType){
-        throw Error("Invalid or unsupported language")
-    }
-
-const s = fs.readFileSync(join(__dirname, schemPath,'Structure.json'), 'utf-8')
-const schema: Schema = JSON.parse(s)
-const params:string = schema.inputs.map((input) => {
-
-        if(language === 'CPP'){
-
+function generateParams(isSchema:ProblemPayload, language:string, langType:Record<any,any>){
+  const params = isSchema.inputs.map((input) => {
+           if(language === 'CPP'){
             if(checkForReference(input.type)){
                 return `${langType[input.type]}& ${input.name}`
             }else{
@@ -34,38 +74,30 @@ const params:string = schema.inputs.map((input) => {
         }
 
         return `${input.name}`
-    })
-    .join(", ");
+        })
+        .join(", ")
+    return params;
+}
 
-    const boilerPlatePath = join(__dirname, process.env.PATHTOSCHEMA!,'boilerplate')
-    if(!fs.existsSync(boilerPlatePath)){
-      fs.mkdirSync(boilerPlatePath, {recursive:true})
-    }
-
-    if(language === 'CPP'){
+function buildBoilerPlate(language:string, langType:Record<any,any>, schema:ProblemPayload, params:string){
+  if(language === 'CPP'){
         const cppCode = `${langType[schema.output.type]} ${schema.name} (${params}) {\n //Type your logic here\n}`;
-        fs.writeFileSync(join(boilerPlatePath,'function.cpp'),cppCode )
+        return cppCode
       }
       
       if(language === 'RUST'){
         const rustCode = `fn ${schema.name}(${params}) ->${langType[schema.output.type]}  {\n //Type your logic here\n}`
-      fs.writeFileSync(join(boilerPlatePath,'function.rust'),rustCode)
+        return rustCode
+      }
+      
+      if(language === 'JS'){
+        const jsCode = `function ${schema.name}(${params}){\n //Type your logic here\n}`
+        return jsCode
     }
-
-    if(language === 'JS'){
-      const rustCode = `function ${schema.name}(${params}){\n //Type your logic here\n}`
-      fs.writeFileSync(join(boilerPlatePath,'function.js'),rustCode)
-    }
+    return ""
 }
 
-
 function generateFullCode(language : 'CPP' | 'JS' | 'RUST', schemPath:string){
-  const mapper = {
-        'CPP': CPP_TYPE_MAP,
-        'JS' : JS_TYPE_MAP,
-        'RUST': RUST_TYPE_MAP
-    }
-
     const languageMapper = mapper[language]
 
   if(!languageMapper){
@@ -202,10 +234,10 @@ const cppAdvancedSchema = {
 
 const checkForReference = (type: string) =>  type.includes('[]') || type === 'string';
 
-console.log(generateBoilerPlate('CPP',process.env.PATHTOSCHEMA!))
+// console.log(generateBoilerPlate('CPP',process.env.PATHTOSCHEMA!))
 
 
-console.log(generateFullCode('CPP',process.env.PATHTOSCHEMA!))
+// console.log(generateFullCode('CPP',process.env.PATHTOSCHEMA!))
 
 
 // function g2sum(a1:number,b1:number) {

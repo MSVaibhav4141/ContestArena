@@ -5,13 +5,20 @@ export const JS_TYPE_MAP = {
   "bool": "boolean",
   "char": "string",
   "string": "string",
-
+  
   "int[]": "number[]",
+  "long[]": "number[]",
   "double[]": "number[]",
+  "bool[]" : "number[]",
   "string[]": "string[]",
 
   "int[][]": "number[][]",
   "double[][]": "number[][]",
+  "bool[][]": "number[][]",
+  "string[][]": "string[][]",
+  "char[]" : "string",
+  "char[][]": "string[][]",
+  'long[][]':"number[][]",
 
   "TreeNode": "TreeNode",
   "ListNode": "ListNode"
@@ -31,11 +38,17 @@ export const CPP_TYPE_MAP = {
   "int[]":     "vector<int>",
   "long[]":    "vector<long long>",
   "double[]":  "vector<double>",
+  "bool[]" :   "vector<bool>",
+  "char[]" :   "string",
   "string[]":  "vector<string>",
 
   // ===== 2D arrays =====
-  "int[][]":   "vector<vector<int>>",
+  "int[][]":    "vector<vector<int>>",
   "double[][]": "vector<vector<double>>",
+  "bool[][]":   "vector<vector<bool>>",
+  "long[][]":   "vector<vector<long long>>",
+  "string[][]": "vector<vector<string>>",
+  "char[][]":   "vector<vector<char>>",
 
   // ===== Structures =====
   "TreeNode":  "TreeNode*",
@@ -45,16 +58,25 @@ export const CPP_TYPE_MAP = {
 export const RUST_TYPE_MAP = {
   "int": "i32",
   "long": "i64",
+
   "double": "f64",
   "bool": "bool",
   "char": "char",
   "string": "String",
 
+  "char[]" : "Vec<char>",
   "int[]": "Vec<i32>",
+  "long[]": "Vec<i64>",
+  "bool[]" : "Vec<bool>",
+
   "double[]": "Vec<f64>",
   "string[]": "Vec<String>",
 
   "int[][]": "Vec<Vec<i32>>",
+  'long[][]':"Vec<Vec<i64>>",
+  "bool[][]": "Vec<Vec<bool>>",
+  "char[][]": "Vec<Vec<char>>",
+  "string[][]": "Vec<Vec<String>>",
   "double[][]": "Vec<Vec<f64>>",
 
   "TreeNode": "Option<Box<TreeNode>>",

@@ -77,7 +77,7 @@ model Language {
   Submission Submission[]
 }
 model StartCode {
-  id Int @id  
+  id Int @id @default(autoincrement())
   problemId String
   languageId Int 
   code String
