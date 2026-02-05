@@ -1,28 +1,8 @@
+import { ProblemPayload } from "@repo/types";
 import { CPP_TYPE_MAP, JS_TYPE_MAP, RUST_TYPE_MAP, ScalarType, Schema, StructuralType } from "./mapping/mapper"
 import fs from "fs";
 import path, { join } from "path";
 
-type BaseType = "int" | "long" | "double" | "bool" | "char" | "string"
-type SpecialType = "TreeNode" | "ListNode"
-
-type ParamType =
-  | BaseType
-  | SpecialType
-  | `${BaseType}[]`
-  | `${BaseType}[][]`
-
-interface InputParam {
-  id: string
-  name: string
-  type: ParamType
-}
-
-interface ProblemPayload {
-  name: string,
-  description:string,
-  inputs: InputParam[]
-  output: { type: ParamType }
-}
 
 const mapper = {
     'CPP': CPP_TYPE_MAP,
@@ -81,17 +61,17 @@ function generateParams(isSchema:ProblemPayload, language:string, langType:Recor
 
 function buildBoilerPlate(language:string, langType:Record<any,any>, schema:ProblemPayload, params:string){
   if(language === 'CPP'){
-        const cppCode = `${langType[schema.output.type]} ${schema.name} (${params}) {\n //Type your logic here\n}`;
+        const cppCode = `${langType[schema.output.type]} ${toCamelCase(schema.name)} (${params}) {\n //Type your logic here\n}`;
         return cppCode
       }
       
       if(language === 'RUST'){
-        const rustCode = `fn ${schema.name}(${params}) ->${langType[schema.output.type]}  {\n //Type your logic here\n}`
+        const rustCode = `fn ${toCamelCase(schema.name)}(${params}) ->${langType[schema.output.type]}  {\n //Type your logic here\n}`
         return rustCode
       }
       
       if(language === 'JS'){
-        const jsCode = `function ${schema.name}(${params}){\n //Type your logic here\n}`
+        const jsCode = `function ${toCamelCase(schema.name)}(${params}){\n //Type your logic here\n}`
         return jsCode
     }
     return ""
@@ -111,7 +91,6 @@ function generateFullCode(language : 'CPP' | 'JS' | 'RUST', schemPath:string){
 
   const s = fs.readFileSync(join(schemPath,'Structure.json'), 'utf-8')
   const schema:Schema = JSON.parse(s)
-
   const declarations = schema.inputs.map((i,k) => {
     
     if(i.type.includes('[]') || i.type === 'string'){
@@ -132,7 +111,7 @@ function generateFullCode(language : 'CPP' | 'JS' | 'RUST', schemPath:string){
 
   int main(){
   ${declarations.join(";\n")}
-  ${languageMapper[schema.output.type]} result = ${schema.name}(${schema.inputs.map(i => i.name)});
+  ${languageMapper[schema.output.type]} result = ${toCamelCase(schema.name)}(${schema.inputs.map(i => i.name)});
   cout << result << endl;
   return 0;
   }
@@ -234,7 +213,17 @@ const cppAdvancedSchema = {
 
 const checkForReference = (type: string) =>  type.includes('[]') || type === 'string';
 
-// console.log(generateBoilerPlate('CPP',process.env.PATHTOSCHEMA!))
+const toCamelCase = (str:string):string => {
+  return str
+    .split(/[^a-zA-Z0-9]/) // Split by space, hyphen, or underscore
+    .filter(Boolean)       // Remove empty strings from double separators
+    .map((word, index) => {
+      if (index === 0) return word.toLowerCase();
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join('');
+};
+console.log(generateBoilerPlate(process.env.PATHTOSCHEMA!))
 
 
 // console.log(generateFullCode('CPP',process.env.PATHTOSCHEMA!))

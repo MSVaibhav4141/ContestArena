@@ -6,9 +6,11 @@
   ##USER CODE GOES HERE
 
   int main(){
-  int num1 = 2;
-int num2 = [[2,3],[3,5]]
-  int result = sumoftwo(num1,num2);
+  int nodes = 2;
+vector<vector<int>> edges = [[2,3],[3,5]];
+vector<int> cost = [2,3];
+bool active = true
+  int result = sumoftwoe(nodes,edges,cost,active);
   cout << result << endl;
   return 0;
   }

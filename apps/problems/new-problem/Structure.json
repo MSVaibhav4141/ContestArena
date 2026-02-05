@@ -1,8 +1,10 @@
 {
-  "name": "sumoftwo",
+  "name": "sumoftwoe",
   "inputs": [
-    { "name": "num1", "type": "int" },
-    { "name": "num2", "type": "int" }
+    { "name": "nodes", "type": "int" },
+    { "name": "edges", "type": "int[][]" },
+    { "name": "cost", "type": "int[]" },
+    { "name": "active", "type": "bool" }
   ],
   "output": { "type": "int" }
 }
