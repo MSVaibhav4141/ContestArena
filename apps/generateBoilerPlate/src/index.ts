@@ -3,7 +3,6 @@ import { CPP_TYPE_MAP, JS_TYPE_MAP, RUST_TYPE_MAP, ScalarType, Schema, Structura
 import fs from "fs";
 import path, { join } from "path";
 
-
 const mapper = {
     'CPP': CPP_TYPE_MAP,
     'JS' : JS_TYPE_MAP,

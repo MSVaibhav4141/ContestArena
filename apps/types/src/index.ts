@@ -66,6 +66,10 @@ export const TestCaseSchema = z.object({
   isHidden: z.boolean(),
 });
 
+export const problemSubmission = z.object({
+    cases: z.string(),
+    
+})
 export const J0TestSchema = z.object({
   source_code: z.string(),
   language_id: z.number(),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { createProblemAction } from "../../app/create/problem/action";
+import { createProblemAction, submitTestCases } from "../../app/actions/action";
 import { Monaco } from "@monaco-editor/react";
 import {
   BaseType,
@@ -304,8 +304,11 @@ export default function ProblemForm() {
 
   const handleFinalSubmit = () => {
 
-    console.log(cases)
+    console.log(cases, params, problemName)
+    const slug = `${problemName.split(" ")[0]}-a${problemName.split(" ")[problemName.split(" ").length - 1]}`
+    console.log(slug,'sluug',problemName.split(" "))
 
+    submitTestCases({cases, params, problemName,outputType})
     const languageId = codevaleCurrent?.language === 'cpp' ? 54 : (codevaleCurrent?.language === 'javascript' ? 63 : 42)
     const submissions = cases.map(i => {
       return {
