@@ -21,7 +21,13 @@ export async function createProblemAction(formData: ProblemPayload) {
   }
 
   const { name, description } = formData;
-  const startCode = generateBoilerPlate("", formData);
+
+  const data = {
+    name,
+    inputs:formData.inputs,
+    output:formData.output
+  }
+  const startCode = generateBoilerPlate("", data);
 
   if (!startCode) {
     return false;
@@ -110,22 +116,23 @@ export async function submitTestCases(code: any) {
     fs.writeFileSync(join(tempFolderInput,`${tcNo}.txt`), testCase.input)
     fs.writeFileSync(join(tempFolderOutput,`${tcNo}.txt`), testCase.output)
   })
+
+
+
   // Creating inputs and outputs 
+  // const { stdin, language_id, expected_output } = code;
 
-  console.log(join(process.cwd(),'temp','problems'), 'hey i am this ')
-  const { stdin, language_id, expected_output } = code;
-
-  const submissionPayload = {
-    submissions: [
-      {
-        source_code:
-          '#include <iostream>\n\nint main() {\n    int a = 5;\n    int b = 10;\n    std::cout << "Sum is: " << (a + b);\n    return 0;\n}',
-        language_id: 54,
-        stdin: "",
-        expected_output: "Sum is: 15",
-      },
-    ],
-  };
+  // const submissionPayload = {
+  //   submissions: [
+  //     {
+  //       source_code:
+  //         '#include <iostream>\n\nint main() {\n    int a = 5;\n    int b = 10;\n    std::cout << "Sum is: " << (a + b);\n    return 0;\n}',
+  //       language_id: 54,
+  //       stdin: "",
+  //       expected_output: "Sum is: 15",
+  //     },
+  //   ],
+  // };
 
   // const response: { token: string } = await axios.post(
   //   process.env.J0CLIENT + "/submissions?base64_encoded=false&wait=false",

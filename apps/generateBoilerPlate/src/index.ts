@@ -1,4 +1,4 @@
-import { ProblemPayload } from "@repo/types";
+import { ProblemPayload, Structure } from "@repo/types";
 import { CPP_TYPE_MAP, JS_TYPE_MAP, RUST_TYPE_MAP, ScalarType, Schema, StructuralType } from "./mapping/mapper"
 import fs from "fs";
 import path, { join } from "path";
@@ -9,7 +9,7 @@ const mapper = {
     'RUST': RUST_TYPE_MAP
 }
 
-export function generateBoilerPlate(schemPath:string, schema ?:ProblemPayload){
+export function generateBoilerPlate(schemPath:string, schema ?:Structure){
 
     let isSchema = schema;
 
@@ -18,7 +18,7 @@ export function generateBoilerPlate(schemPath:string, schema ?:ProblemPayload){
         return false
       }
         const structure = fs.readFileSync(join(__dirname, schemPath,'Structure.json'), 'utf-8')
-        isSchema = JSON.parse(structure) as ProblemPayload;
+        isSchema = JSON.parse(structure) as Structure;
       }
 
     if(!isSchema){
@@ -37,7 +37,7 @@ export function generateBoilerPlate(schemPath:string, schema ?:ProblemPayload){
       return allStartCode;
 }
 
-function generateParams(isSchema:ProblemPayload, language:string, langType:Record<any,any>){
+function generateParams(isSchema:Structure, language:string, langType:Record<any,any>){
   const params = isSchema.inputs.map((input) => {
            if(language === 'CPP'){
             if(checkForReference(input.type)){
@@ -58,7 +58,7 @@ function generateParams(isSchema:ProblemPayload, language:string, langType:Recor
     return params;
 }
 
-function buildBoilerPlate(language:string, langType:Record<any,any>, schema:ProblemPayload, params:string){
+function buildBoilerPlate(language:string, langType:Record<any,any>, schema:Structure, params:string){
   if(language === 'CPP'){
         const cppCode = `${langType[schema.output.type]} ${toCamelCase(schema.name)} (${params}) {\n //Type your logic here\n}`;
         return cppCode
@@ -83,45 +83,28 @@ function generateFullCode(language : 'CPP' | 'JS' | 'RUST', schemPath:string){
         throw Error("Invalid or unsupported language")
   }
 
-  const input = fs.readFileSync(join(__dirname,'../../problems/new-problem/tests/inputs/0.txt'),'utf-8')   // ->tofix
+  const schemaRaw = fs.readFileSync(schemPath,'utf-8')
 
-  const cleanInput = input.trim().replace(/\r/g, "");
-  const params = cleanInput.split('\n');
+  if(!schemaRaw){
+    throw Error('Invalid Schema Path')
+  }
 
-  const s = fs.readFileSync(join(schemPath,'Structure.json'), 'utf-8')
-  const schema:Schema = JSON.parse(s)
-  const declarations = schema.inputs.map((i,k) => {
+const schema:Structure = JSON.parse(schemaRaw)
+
+  const inputs = schema.inputs.map((i) => {
     
-    if(i.type.includes('[]') || i.type === 'string'){
-      return `${languageMapper[i.type]} ${i.name} = ${params[k]}`
+    const varType = languageMapper[i.type]
+    if(!varType){
+      throw Error("Invalid Type")
     }
     
-    return `${languageMapper[i.type]} ${i.name} = ${params[k]}`
-    
-  })
+    return `${varType} ${i.name} = readInput<${varType}>();`
 
-  const cppCode = `
-  #include<iostream>
-  #include<vector>
+  }).join("\n");
 
-  using namespace std;
+  const functionParams = schema.inputs.map(i => i.name).join(", ");;
+  const logicFunctionName = `${languageMapper[schema.output.type]} output = ${toCamelCase(schema.name)}(${functionParams});`
 
-  ##USER CODE GOES HERE
-
-  int main(){
-  ${declarations.join(";\n")}
-  ${languageMapper[schema.output.type]} result = ${toCamelCase(schema.name)}(${schema.inputs.map(i => i.name)});
-  cout << result << endl;
-  return 0;
-  }
-  `.trim()
-
-  const boilerPlateFull = join(schemPath, 'boilerPlateFull')
-  if(!fs.existsSync(boilerPlateFull)){
-    fs.mkdirSync(boilerPlateFull)
-  }
-
-  fs.writeFileSync(join(boilerPlateFull, 'function.cpp'),cppCode)
 
 }
 

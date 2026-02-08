@@ -20,12 +20,19 @@ importers:
 
   apps/callbackServer:
     dependencies:
+      '@repo/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@types/express':
         specifier: ^5.0.6
         version: 5.0.6
       express:
         specifier: ^5.2.1
         version: 5.2.1
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
 
   apps/generateBoilerPlate:
     dependencies:

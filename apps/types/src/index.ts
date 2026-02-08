@@ -7,9 +7,18 @@ import { z } from 'zod';
 // Define the raw arrays first so we can reuse them in validation logic if needed
 const BASE_TYPES = ["int", "long", "double", "bool", "char", "string"] as const;
 const SPECIAL_TYPES = ["TreeNode", "ListNode"] as const;
+const ALL_TYPES = [...BASE_TYPES, ...SPECIAL_TYPES];
+
+const ALL_VALID_STRINGS = [
+  ...ALL_TYPES,
+  ...BASE_TYPES.map(t => `${t}[]` as const),
+  ...BASE_TYPES.map(t => `${t}[][]` as const),
+] ;
 
 export const BaseTypeSchema = z.enum(BASE_TYPES);
 export const SpecialTypeSchema = z.enum(SPECIAL_TYPES);
+const r = z.enum(ALL_VALID_STRINGS)
+export type ParamsTypesa =  z.infer<typeof r>
 
 // ParamType is tricky because of the template literals (int[], int[][]). 
 // We validate this using a custom refinement or a comprehensive regex.
@@ -37,6 +46,18 @@ export const InputParamSchema = z.object({
   type: ParamTypeSchema
 });
 
+
+const StructureInputSchema = z.object({
+    name:z.string(),
+    type: z.enum(ALL_VALID_STRINGS)
+})
+export const StructureSchema = z.object({
+    name: z.string(),
+    inputs:z.array(StructureInputSchema),
+    output: z.object({type:z.enum(ALL_VALID_STRINGS)}),
+})
+
+export type Structure = z.infer<typeof StructureSchema>
 export const ProblemPayloadSchema = z.object({
   name: z.string(),
   description: z.string(),
@@ -68,7 +89,7 @@ export const TestCaseSchema = z.object({
 
 export const problemSubmission = z.object({
     cases: z.string(),
-    
+
 })
 export const J0TestSchema = z.object({
   source_code: z.string(),
