@@ -1,5 +1,5 @@
 import Editor, { Monaco, OnMount } from "@monaco-editor/react"
-import { useRef } from "react"
+import { useEffect, useRef } from "react"
 import * as monaco from 'monaco-editor';
 
 interface Props {
@@ -8,15 +8,19 @@ interface Props {
   onLanguageChange: (index: number) => void
   onReset: () => void // <--- NEW PROP
   beforeMount: (monaco: Monaco) => void
+  onChange: (value: string | undefined) => void
 }
 
-export default function CodeEditorPanel({ code, language, onLanguageChange, onReset, beforeMount }: Props) {
+export default function CodeEditorPanel({ code, language, onLanguageChange, onReset, beforeMount,onChange }: Props) {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
 
+  useEffect(() => {
+      console.log(code)
+
+  },[code])
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
   }
-
   return (
     <div className="flex flex-col h-full bg-[#1e1e1e] rounded-xl overflow-hidden">
       <div className="flex justify-between items-center px-4 py-2 bg-[#2d2d2d] text-white select-none">
@@ -52,9 +56,10 @@ export default function CodeEditorPanel({ code, language, onLanguageChange, onRe
       <Editor
         theme="vs-dark"
         language={language}
-        value={code} // This value prop ensures the editor updates when parent state resets
+        value={code} 
         beforeMount={beforeMount}
         onMount={handleEditorDidMount}
+        onChange={onChange}
         height="100%"
         options={{
           minimap: { enabled: false },

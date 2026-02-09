@@ -43,7 +43,7 @@ export const ParamTypeSchema = z.string().refine((val) => {
 export const InputParamSchema = z.object({
   id: z.string(),
   name: z.string(),
-  type: ParamTypeSchema
+  type: z.enum(ALL_VALID_STRINGS)
 });
 
 
@@ -55,6 +55,8 @@ export const StructureSchema = z.object({
     name: z.string(),
     inputs:z.array(StructureInputSchema),
     output: z.object({type:z.enum(ALL_VALID_STRINGS)}),
+    description: z.string(),
+    problemId: z.string().nullable()
 })
 
 export type Structure = z.infer<typeof StructureSchema>
@@ -84,7 +86,7 @@ export const TestCaseSchema = z.object({
   id: z.string(),
   input: z.string(),
   output: z.string(),
-  isHidden: z.boolean(),
+  isHidden: z.boolean().optional(),
 });
 
 export const problemSubmission = z.object({
@@ -154,3 +156,4 @@ export type Props = z.infer<typeof ProblemFormStateSchema> & {
   setOutputType: (v: any) => void;
   handleSubmit: () => void;
 };
+

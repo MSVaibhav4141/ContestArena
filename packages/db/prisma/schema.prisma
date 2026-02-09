@@ -1,114 +1,111 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
-  moduleFormat = "esm"
+  provider               = "prisma-client"
+  output                 = "../generated/prisma"
   generatedFileExtension = "ts"
-  importFileExtension = "ts"
+  importFileExtension    = "ts"
+  moduleFormat           = "esm"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id              String       @id @unique @default(cuid())
+  name            String
+  email           String       @unique
+  image           String
+  role            Role         @default(USER)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  contestId       String?
+  problemSolved   Int          @default(0)
+  createdProblems Problem[]    @relation("CreatedBy")
+  problemId       Problem[]
+  submission      Submission[]
+}
+
+model Problem {
+  id           String       @id @unique @default(cuid())
+  title        String
+  description  String
+  slug         String
+  userId       String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  createdBy    String
+  hidden       Boolean      @default(false)
+  difficulty   Difficulty
+  creator      User         @relation("CreatedBy", fields: [createdBy], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+  starterCodes StartCode[]
+  submission   Submission[]
+}
+
+model Language {
+  id         Int          @id @default(autoincrement())
+  langauage  Languages
+  startCode  StartCode[]
+  Submission Submission[]
+}
+
+model StartCode {
+  id         Int      @id @default(autoincrement())
+  problemId  String
+  languageId Int
+  code       String
+  language   Language @relation(fields: [languageId], references: [id])
+  problems   Problem  @relation(fields: [problemId], references: [id])
+}
+
+model Submission {
+  id          String           @id @default(cuid())
+  userId      String
+  problemId   String
+  languageId  Int
+  status      SubmissionStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  memoryTaken Int?             @default(0)
+  timeTaken   Float?           @default(0)
+  code        String
+  fullCode    String
+  language    Language         @relation(fields: [languageId], references: [id])
+  problem     Problem          @relation(fields: [problemId], references: [id])
+  user        User             @relation(fields: [userId], references: [id])
+  testcases   TestCases[]
+}
+
+model TestCases {
+  id           String           @id 
+  submissionId String
+  input        String
+  output       String
+  memoryTaken  Int?
+  isHidden     Boolean @default(false)
+  timeTaken    Float?
+  status       SubmissionStatus @default(PENDING)
+  submissions  Submission       @relation(fields: [submissionId], references: [id])
+}
 
 enum Role {
   USER
   ADMIN
 }
+
 enum Languages {
   CPP
   JS
   RUST
 }
+
 enum Difficulty {
   EASY
   MEDIUM
   HARD
 }
+
 enum SubmissionStatus {
   ACCEPTED
-  REJECTED 
+  REJECTED
   PENDING
-}
-
-model User {
-  id  String @unique @id @default(cuid())
-  name String 
-  email String @unique
-  image String
-  role Role @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  contestId String?
-  problemSolved Int @default(0)
-  problemId Problem[]
-  submission Submission[]
-  createdProblems Problem[] @relation("CreatedBy")
-
-}
-
-model Problem{
-  id  String @unique @id @default(cuid())
-  title String 
-  description String
-  slug String
-  userId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  createdBy String
-  hidden Boolean @default(false) 
-  difficulty Difficulty 
-  starterCodes StartCode[]
-  submission Submission[]
-  user User @relation(fields: [userId], references: [id])
-  creator User @relation("CreatedBy",fields: [createdBy], references: [id])
-}
-
-model Language {
-  id Int @id @default(autoincrement())
-  langauage Languages
-  startCode StartCode[]
-  Submission Submission[]
-}
-model StartCode {
-  id Int @id @default(autoincrement())
-  problemId String
-  languageId Int 
-  code String
-  language Language @relation(fields: [languageId], references: [id])
-  problems Problem @relation(fields: [problemId], references: [id])
-}
-model Submission {
-  id String @id @default(cuid())
-  userId String
-  problemId String
-  languageId Int
-  status SubmissionStatus @default(PENDING)
-  createdAt DateTime @default(now())
-  memoryTaken Int?
-  timeTaken Float?
-  code String
-  fullCode String
-  testcases TestCases[]
-  language Language @relation(fields: [languageId], references: [id])
-  problem Problem @relation(fields: [problemId] ,references: [id])
-  user User @relation(fields: [userId], references: [id])
-}
-
-model TestCases{
-  id String @id @default(cuid())
-  submissionId String
-  input String
-  output String
-  memoryTaken Int?
-  timeTaken Float?
-  status SubmissionStatus @default(PENDING)
-  submissions Submission @relation(fields: [submissionId], references: [id])
-
 }

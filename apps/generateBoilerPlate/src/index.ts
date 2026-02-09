@@ -76,9 +76,9 @@ function buildBoilerPlate(language:string, langType:Record<any,any>, schema:Stru
     return ""
 }
 
-function generateFullCode(language : 'CPP' | 'JS' | 'RUST', schemPath:string){
+export function generateFullCode(language : 'CPP' | 'JS' | 'RUST', schemPath:string, userCode:string){
     const languageMapper = mapper[language]
-
+  
   if(!languageMapper){
         throw Error("Invalid or unsupported language")
   }
@@ -103,8 +103,52 @@ const schema:Structure = JSON.parse(schemaRaw)
   }).join("\n");
 
   const functionParams = schema.inputs.map(i => i.name).join(", ");;
-  const logicFunctionName = `${languageMapper[schema.output.type]} output = ${toCamelCase(schema.name)}(${functionParams});`
+  const logicFunctionName = `${languageMapper[schema.output.type]} result = ${toCamelCase(schema.name)}(${functionParams});`
 
+  if (language === 'CPP') {
+        return `
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <map>
+#include <json.hpp> 
+#include "bridge.h" // Contains readInput, printOutput, ListNode, TreeNode
+
+using namespace std;
+
+// --- USER CODE START ---
+${userCode}
+// --- USER CODE END ---
+
+int main() {
+    // Fast I/O
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+
+    try {
+        // 1. Read Inputs
+        ${inputs}
+
+        // 2. Call User Function
+        // Note: We use 'auto' to handle cases where user might return something slightly different
+        // but compatible, though strict types are better.
+        ${logicFunctionName}
+
+        // 3. Print Output
+        printOutput(result);
+
+    } catch (const exception& e) {
+        cerr << "Runtime Error: " << e.what() << endl;
+        return 1;
+    }
+    
+    return 0;
+}
+`.trim();
+    }
+
+    throw Error("Language implementation pending");
 
 }
 

@@ -14,7 +14,7 @@ export default function ProblemDetailsForm(props: Props) {
     handleSubmit, problemId,
     baseTypes, specialTypes
   } = props
-  console.log(problemId)
+  
   return (
     <div className="flex-1 max-w-2xl bg-white rounded-2xl shadow-lg p-6 space-y-6">
       <h1 className="text-3xl font-bold text-gray-800">Create Problem</h1>

@@ -9,9 +9,11 @@ import {
   BolierPateResponse,
   ErrorResponse,
   InputParam,
+  ParamsTypesa,
   ParamType,
   ProblemPayload,
   SpecialType,
+  Structure,
   TestCase,
 } from "@repo/types";
 import CodeEditorPanel from "./CodeBuilder";
@@ -48,7 +50,7 @@ export default function ProblemForm() {
   const [problemName, setProblemName] = useState("");
   const [problemDesc, setProblemDesc] = useState("");
   const [params, setParams] = useState<InputParam[]>([]);
-  const [outputType, setOutputType] = useState<ParamType>("int");
+  const [outputType, setOutputType] = useState<ParamsTypesa>("int");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [paramName, setParamName] = useState("");
   const [selectedBase, setSelectedBase] = useState<BaseType>("int");
@@ -56,7 +58,7 @@ export default function ProblemForm() {
   const [dimension, setDimension] = useState<1 | 2>(1);
   const [special, setSpecial] = useState<"" | SpecialType>("");
   const [problemId, setProblemId] = useState<null | string>(null);
-  const [cases, setCases] = useState<TestCase[]>([])
+  const [cases, setCases] = useState<TestCase[]>([]);
   const [codevale, setCode] = useState<BoilerplateCode[] | null>(null);
   const [codevaleCurrent, setCodeCurrent] = useState<{
     language: string;
@@ -211,7 +213,7 @@ export default function ProblemForm() {
     setEditingId(null);
   };
 
-  const buildType = (): ParamType => {
+  const buildType = (): ParamsTypesa => {
     if (special) return special;
     if (!isArray) return selectedBase;
     return dimension === 1 ? `${selectedBase}[]` : `${selectedBase}[][]`;
@@ -258,7 +260,7 @@ export default function ProblemForm() {
 
   const handleSubmit = async () => {
     setIsLoading(true);
-    const payload: ProblemPayload = {
+    const payload: Structure = {
       name: problemName,
       description: problemDesc,
       inputs: params,
@@ -303,21 +305,31 @@ export default function ProblemForm() {
   };
 
   const handleFinalSubmit = () => {
-
-    console.log(cases, params, problemName)
-    const slug = `${problemName.split(" ")[0]}-a${problemName.split(" ")[problemName.split(" ").length - 1]}`
-    console.log(slug,'sluug',problemName.split(" "))
-
-    submitTestCases({cases, params, problemName,outputType})
-    const languageId = codevaleCurrent?.language === 'cpp' ? 54 : (codevaleCurrent?.language === 'javascript' ? 63 : 42)
-    const submissions = cases.map(i => {
+  
+    const languageId =
+    codevaleCurrent?.language === "cpp"
+    ? 54
+    : codevaleCurrent?.language === "javascript"
+    ? 63
+    : 42;
+    submitTestCases({
+      cases,
+      params,
+      problemName,
+      outputType,
+      codevaleCurrent,
+      problemId,
+      languageId,
+      language:codevaleCurrent?.language 
+    });
+    const submissions = cases.map((i) => {
       return {
-        language_id:languageId,
-        stdin:i.input,
+        language_id: languageId,
+        stdin: i.input,
         expected_output: i.output,
-        callback_url:"http://54.197.26.148:8080/api/result"
-      }
-    })
+        callback_url: "http://54.197.26.148:8080/api/result",
+      };
+    });
     console.log("Finalize & Publish Clicked");
 
     alert("Ready for Backend Logic: Submit Code + TestCases + Metadata");
@@ -325,20 +337,20 @@ export default function ProblemForm() {
 
   const handleResetCode = () => {
     if (!codevale || !codevaleCurrent) return;
-    
+
     // Find the original boilerplate object that matches the currently active language
     const originalBoilerplate = codevale.find(
       (bp) => getLanguageFromId(bp.languageId) === codevaleCurrent.language,
     );
-    console.log(originalBoilerplate,'as')
-    
+    console.log(originalBoilerplate, "as");
+
     if (originalBoilerplate) {
       // Restore the code
       setCodeCurrent({
         language: codevaleCurrent.language, // Keep same language
         code: originalBoilerplate.code, // Reset code to original
       });
-      console.log(codevaleCurrent)
+      console.log(codevaleCurrent);
     }
   };
 
@@ -393,7 +405,7 @@ export default function ProblemForm() {
                         `}
           >
             {isLoading && !showEditor && (
-              <Loder title="Generating Boilerplate..."/>
+              <Loder title="Generating Boilerplate..." />
             )}
 
             <div className="h-full overflow-y-auto pr-2 custom-scrollbar">
@@ -460,6 +472,16 @@ export default function ProblemForm() {
                     language={codevaleCurrent?.language || "cpp"}
                     beforeMount={handleEditorWillMount}
                     onReset={handleResetCode} // <--- Pass the handler here
+                    onChange={(newCode) => {
+                      setCodeCurrent((prev) => {
+                        if (!prev) return prev;
+
+                        return {
+                          ...prev,
+                          code: newCode ?? "",
+                        };
+                      });
+                    }}
                     onLanguageChange={(index) => {
                       if (!codevale) return;
                       const selected = codevale[index];
@@ -486,7 +508,11 @@ export default function ProblemForm() {
                   className="flex flex-col min-h-[10%]"
                 >
                   <div className="flex-1 overflow-hidden">
-                    <TestCaseManager params={params} cases={cases} setCases={setCases}/>
+                    <TestCaseManager
+                      params={params}
+                      cases={cases}
+                      setCases={setCases}
+                    />
                   </div>
 
                   {/* Submit Action Bar */}
@@ -495,7 +521,7 @@ export default function ProblemForm() {
                       onClick={handleFinalSubmit}
                       className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transform transition active:scale-95 flex items-center gap-2"
                     >
-                     Check Test Cases
+                      Check Test Cases
                     </button>
                   </div>
                 </div>

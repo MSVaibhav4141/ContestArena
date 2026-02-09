@@ -1,0 +1,1 @@
+{"name":"problem","inputs":[{"name":"para","type":"int"},{"name":"vecto","type":"int[]"}],"output":{"type":"int"}}

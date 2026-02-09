@@ -86,7 +86,7 @@ export default function TestCaseManager({ params, cases, setCases }: Props) {
     setInputValues(values);
     
     setOutput(tc.output)
-    setIsHidden(tc.isHidden)
+    setIsHidden(tc.isHidden || false)
     setIsModalOpen(false) 
   }
 
