@@ -1,0 +1,1 @@
+{"name":"dungeon-game","inputs":[{"name":"dungeon","type":"int[][]"}],"output":{"type":"int"}}

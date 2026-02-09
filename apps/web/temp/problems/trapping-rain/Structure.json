@@ -1,0 +1,1 @@
+{"name":"trapping-rain","inputs":[{"name":"height","type":"int[]"}],"output":{"type":"int"}}

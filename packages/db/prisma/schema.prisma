@@ -78,6 +78,7 @@ model Submission {
 model TestCases {
   id           String           @id 
   submissionId String
+  identity     String
   input        String
   output       String
   memoryTaken  Int?

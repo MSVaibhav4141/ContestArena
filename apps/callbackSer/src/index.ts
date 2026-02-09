@@ -42,6 +42,15 @@ app.put("/update/submission/:tId", async(req, res) => {
             }
         }
     })
+
+    const totalTcPending = await prisma.testCases.count({
+        where:{
+            submissionId:tcUpdate.submissionId,
+            status:"PENDING"
+        }
+    })
+
+    
     const totalTc = await prisma.testCases.count({
         where:{
             submissionId:tcUpdate.submissionId
@@ -52,6 +61,18 @@ app.put("/update/submission/:tId", async(req, res) => {
         status:"ACCEPTED"
     }})
 
+    if(totalTcPending === 0){
+        if(totalTc !== totalAcceptedTc){
+             await prisma.submission.update({
+            where:{
+                id: tcUpdate.submissionId
+            },
+            data:{
+                status:"REJECTED"
+            }
+        })
+        }
+    }
     if(totalTc === totalAcceptedTc){
         await prisma.submission.update({
             where:{

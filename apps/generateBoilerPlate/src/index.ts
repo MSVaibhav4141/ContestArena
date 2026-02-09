@@ -113,6 +113,7 @@ const schema:Structure = JSON.parse(schemaRaw)
 #include <algorithm>
 #include <map>
 #include <json.hpp> 
+#include <climits>
 #include "bridge.h" // Contains readInput, printOutput, ListNode, TreeNode
 
 using namespace std;

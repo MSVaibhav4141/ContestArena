@@ -86,9 +86,12 @@ export const TestCaseSchema = z.object({
   id: z.string(),
   input: z.string(),
   output: z.string(),
+  identity: z.string(),
+  submissionId:z.string(),
   isHidden: z.boolean().optional(),
 });
 
+const TestCaseDraftSchema = TestCaseSchema.partial({ identity: true, submissionId:true });
 export const problemSubmission = z.object({
     cases: z.string(),
 
@@ -112,7 +115,7 @@ export type ProblemPayload = z.infer<typeof ProblemPayloadSchema>;
 export type BoilerplateCode = z.infer<typeof BoilerplateCodeSchema>;
 export type BolierPateResponse = z.infer<typeof BolierPateResponseSchema>;
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
-export type TestCase = z.infer<typeof TestCaseSchema>;
+export type TestCase = z.infer<typeof TestCaseDraftSchema>;
 export type J0Test = z.infer<typeof J0TestSchema>;
 
 // ---------------------------------------------------------

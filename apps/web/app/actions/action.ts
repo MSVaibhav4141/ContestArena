@@ -87,7 +87,7 @@ export async function createProblemAction(formData: Structure) {
 }
 
 export async function submitTestCases(code: any) {
-  const {cases,params , problemName,outputType, codevaleCurrent,problemId,language, languageId} = code; 
+  const {cases,params ,subId, problemName,outputType, codevaleCurrent,problemId,language, languageId} = code; 
   
   const session = await auth()
 
@@ -128,12 +128,13 @@ export async function submitTestCases(code: any) {
   const fullCode = generateFullCode(codevaleCurrent.language.toUpperCase(), join(tempPath,'Structure.json'),codevaleCurrent.code)
 
   const submissions:any = [];
-  const testCasesArray:(TestCase & { submissionId: string })[] = []
+  const testCasesArray:(TestCase & { submissionId: string, identity:string })[] = []
 
    console.log(problemId, "Hey i am problem id")
   await prisma.$transaction(async (txn) => {
      const submission =  await txn.submission.create({
         data:{
+          id:subId,
           userId: user,
           problemId,
           languageId:language === 'cpp' ? 1 : language === 'rust' ? 2 : language === 'javascript' ? 3 : 1,
@@ -156,14 +157,17 @@ export async function submitTestCases(code: any) {
     }
 
     submissions.push(payload)
-    testCasesArray.push({
+
+    const tcPaylaod = {
       id: testCaseId,
+      identity: cases[i].id,
       submissionId:submission.id,
       input:stdinData,
       output:stdoutData,
-    })
+    } 
+    testCasesArray.push(tcPaylaod)
     }
-
+    console.log(testCasesArray)
       const testCases = await txn.testCases.createMany({
         data: testCasesArray
       })

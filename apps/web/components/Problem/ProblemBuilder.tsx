@@ -10,8 +10,6 @@ import {
   ErrorResponse,
   InputParam,
   ParamsTypesa,
-  ParamType,
-  ProblemPayload,
   SpecialType,
   Structure,
   TestCase,
@@ -20,6 +18,7 @@ import CodeEditorPanel from "./CodeBuilder";
 import TestCaseManager from "./TestCaseManager";
 import ProblemDetailsForm from "./ProblemDetailForm";
 import { Loder } from "../Loder";
+import { poll } from "./polling";
 
 // --- Types ---
 const baseTypes: BaseType[] = [
@@ -46,7 +45,7 @@ const getLanguageFromId = (id: number): string => {
 };
 
 export default function ProblemForm() {
-  // --- Business Logic State (Unchanged) ---
+  // --- Business Logic State ---
   const [problemName, setProblemName] = useState("");
   const [problemDesc, setProblemDesc] = useState("");
   const [params, setParams] = useState<InputParam[]>([]);
@@ -60,11 +59,16 @@ export default function ProblemForm() {
   const [problemId, setProblemId] = useState<null | string>(null);
   const [cases, setCases] = useState<TestCase[]>([]);
   const [codevale, setCode] = useState<BoilerplateCode[] | null>(null);
+  
+  const [tcResult, setResult] = useState<any>(null);
   const [codevaleCurrent, setCodeCurrent] = useState<{
     language: string;
     code: string;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // 🔥 NEW STATE: Track if we are currently running the tests
+  const [isEvaluating, setIsEvaluating] = useState(false);
 
   // --- RESIZE STATE & REFS ---
   const containerRef = useRef<HTMLDivElement>(null);
@@ -137,7 +141,7 @@ export default function ProblemForm() {
     };
   }, [isDraggingH, isDraggingV]);
 
-  // --- Monaco Config (Unchanged) ---
+  // --- Monaco Config ---
   const handleEditorWillMount = (monaco: Monaco) => {
     monaco.languages.register({ id: "cpp" });
     monaco.languages.setMonarchTokensProvider("cpp", {
@@ -304,35 +308,44 @@ export default function ProblemForm() {
     }
   };
 
-  const handleFinalSubmit = () => {
-  
-    const languageId =
-    codevaleCurrent?.language === "cpp"
-    ? 54
-    : codevaleCurrent?.language === "javascript"
-    ? 63
-    : 42;
-    submitTestCases({
-      cases,
-      params,
-      problemName,
-      outputType,
-      codevaleCurrent,
-      problemId,
-      languageId,
-      language:codevaleCurrent?.language 
-    });
-    const submissions = cases.map((i) => {
-      return {
-        language_id: languageId,
-        stdin: i.input,
-        expected_output: i.output,
-        callback_url: "http://54.197.26.148:8080/api/result",
-      };
-    });
-    console.log("Finalize & Publish Clicked");
+  const handleFinalSubmit = async () => {
+    if (!codevaleCurrent) return;
 
-    alert("Ready for Backend Logic: Submit Code + TestCases + Metadata");
+    // 🔥 1. START LOADING & CLEAR OLD RESULTS
+    setIsEvaluating(true);
+    setResult(null);
+
+    const languageId =
+      codevaleCurrent.language === "cpp"
+        ? 54
+        : codevaleCurrent.language === "javascript"
+        ? 63
+        : 42;
+
+    const subId = crypto.randomUUID();
+
+    try {
+        await submitTestCases({
+          subId,
+          cases,
+          params,
+          problemName,
+          outputType,
+          codevaleCurrent,
+          problemId,
+          languageId,
+          language: codevaleCurrent.language,
+        });
+        
+        // 🔥 2. WAIT FOR RESULTS via Polling
+        await poll(subId, setResult);
+        console.log("Finalize & Publish Complete");
+    } catch (error) {
+        console.error("Submission failed", error);
+    } finally {
+        // 🔥 3. STOP LOADING
+        setIsEvaluating(false);
+    }
   };
 
   const handleResetCode = () => {
@@ -384,14 +397,16 @@ export default function ProblemForm() {
       `}</style>
 
       <div className="min-h-screen bg-gray-100 overflow-hidden flex flex-col pt-6 px-6 pb-6">
-        {/* Main Layout Container 
-                    Ref added for resizing logic
-                */}
+        {/* Main Layout Container */}
         <div
           ref={containerRef}
           className={`
                         flex w-full mx-auto transition-all duration-700 ease-[cubic-bezier(0.25,0.8,0.25,1)] relative
-                        ${showEditor ? "max-w-[1800px] justify-between h-[calc(100vh-3rem)]" : "max-w-7xl justify-center items-start pt-10"}
+                        ${
+                          showEditor
+                            ? "max-w-[1800px] justify-between h-[calc(100vh-3rem)]"
+                            : "max-w-7xl justify-center items-start pt-10"
+                        }
                     `}
         >
           {/* --- LEFT PANEL: Problem Details --- */}
@@ -456,11 +471,10 @@ export default function ProblemForm() {
               style={{ width: `${100 - leftPanelWidth}%` }}
               className="flex flex-col gap-0 animate-slide-in h-full relative"
             >
-              {/* Pointer Events Hack: 
-                                When dragging, set pointer-events: none on iframe/editor so mouse doesn't get stuck 
-                            */}
               <div
-                className={`flex flex-col h-full ${isDraggingV ? "pointer-events-none select-none" : ""}`}
+                className={`flex flex-col h-full ${
+                  isDraggingV ? "pointer-events-none select-none" : ""
+                }`}
               >
                 {/* TOP: Editor Area */}
                 <div
@@ -471,7 +485,7 @@ export default function ProblemForm() {
                     code={codevaleCurrent?.code || ""}
                     language={codevaleCurrent?.language || "cpp"}
                     beforeMount={handleEditorWillMount}
-                    onReset={handleResetCode} // <--- Pass the handler here
+                    onReset={handleResetCode}
                     onChange={(newCode) => {
                       setCodeCurrent((prev) => {
                         if (!prev) return prev;
@@ -512,6 +526,8 @@ export default function ProblemForm() {
                       params={params}
                       cases={cases}
                       setCases={setCases}
+                      tcResult={tcResult}
+                      isEvaluating={isEvaluating} // 🔥 PASSING THE PROP HERE
                     />
                   </div>
 
@@ -519,9 +535,43 @@ export default function ProblemForm() {
                   <div className="flex-shrink-0 flex justify-end pt-3">
                     <button
                       onClick={handleFinalSubmit}
-                      className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transform transition active:scale-95 flex items-center gap-2"
+                      disabled={isEvaluating} // 🔥 Disable while running
+                      className={`
+                        font-bold py-3 px-8 rounded-xl shadow-lg transform transition flex items-center gap-2
+                        ${
+                          isEvaluating
+                            ? "bg-gray-400 cursor-not-allowed scale-100"
+                            : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 active:scale-95 text-white"
+                        }
+                      `}
                     >
-                      Check Test Cases
+                      {isEvaluating ? (
+                        <>
+                          <svg
+                            className="animate-spin h-5 w-5 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          Evaluating...
+                        </>
+                      ) : (
+                        "Check Test Cases"
+                      )}
                     </button>
                   </div>
                 </div>
