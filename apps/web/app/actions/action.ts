@@ -152,7 +152,7 @@ export async function submitTestCases(code: any) {
       "language_id": languageId,
       "stdin": Buffer.from(stdinData).toString('base64'),
       "expected_output": Buffer.from(stdoutData).toString('base64'),
-      "callback_url":`${process.env.J0URLb}:8080/update/submission/${testCaseId}`
+      "callback_url":`${process.env.J0URL}:8080/update/submission/${testCaseId}`
     }
 
     submissions.push(payload)
