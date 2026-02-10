@@ -124,8 +124,7 @@ export async function submitTestCases(code: any) {
     fs.writeFileSync(join(tempFolderInput,`${tcNo}.txt`), testCase.input)
     fs.writeFileSync(join(tempFolderOutput,`${tcNo}.txt`), testCase.output)
   })
-  console.log(codevaleCurrent.language)
-  const fullCode = generateFullCode(codevaleCurrent.language.toUpperCase(), join(tempPath,'Structure.json'),codevaleCurrent.code)
+  const fullCode = generateFullCode(codevaleCurrent.language.toUpperCase(), join(tempPath,'Structure.json'),codevaleCurrent.code, problemName)
 
   const submissions:any = [];
   const testCasesArray:(TestCase & { submissionId: string, identity:string })[] = []

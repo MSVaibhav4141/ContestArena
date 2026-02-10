@@ -76,7 +76,7 @@ function buildBoilerPlate(language:string, langType:Record<any,any>, schema:Stru
     return ""
 }
 
-export function generateFullCode(language : 'CPP' | 'JS' | 'RUST', schemPath:string, userCode:string){
+export function generateFullCode(language : 'CPP' | 'JS' | 'RUST', schemPath:string, userCode:string, problemName:string){
     const languageMapper = mapper[language]
   
   if(!languageMapper){
@@ -103,7 +103,7 @@ const schema:Structure = JSON.parse(schemaRaw)
   }).join("\n");
 
   const functionParams = schema.inputs.map(i => i.name).join(", ");;
-  const logicFunctionName = `${languageMapper[schema.output.type]} result = ${toCamelCase(schema.name)}(${functionParams});`
+  const logicFunctionName = `${languageMapper[schema.output.type]} result = ${toCamelCase(problemName)}(${functionParams});`
 
   if (language === 'CPP') {
         return `
