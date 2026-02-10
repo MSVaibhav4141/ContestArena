@@ -137,7 +137,7 @@ export async function submitTestCases(code: any) {
           userId: user,
           problemId,
           languageId:language === 'cpp' ? 1 : language === 'rust' ? 2 : language === 'javascript' ? 3 : 1,
-          code: String(code),
+          code: String(codevaleCurrent.code),
           fullCode: String(fullCode)
         }
       })
