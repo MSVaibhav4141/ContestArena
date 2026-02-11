@@ -1,1 +1,0 @@
-{"name":"get-sum","inputs":[{"name":"numberA","type":"int"},{"name":"numberB","type":"int"}],"output":{"type":"int"}}

@@ -281,7 +281,7 @@ export default function TestCaseManager({ params, cases, tcResult, setCases, isE
                      </div>
                   </div>
 
-                  <div className="flex justify-end gap-3 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex justify-end gap-3 text-xs group-hover:opacity-100 transition-opacity">
                     {/* Disable Edit/Delete while running */}
                     {!isEvaluating && (
                         <>
@@ -346,6 +346,14 @@ export default function TestCaseManager({ params, cases, tcResult, setCases, isE
                                         <div className="text-xs text-gray-500 uppercase mb-1">Expected Output</div>
                                         <div className="bg-white/60 border rounded p-2 font-mono text-sm">{tc.output}</div>
                                     </div>
+                                      <div className="flex justify-end gap-3 text-xs group-hover:opacity-100 transition-opacity">
+                                         {!isEvaluating && (
+                                             <>
+                                                 <button onClick={() => handleEdit(tc)} className="text-blue-600 hover:text-blue-800 font-medium">Edit</button>
+                                                 <button onClick={() => handleDelete(tc.id)} className="text-red-600 hover:text-red-800 font-medium">Delete</button>
+                                             </>
+                                         )}
+                                       </div>
                                  </div>
                             </div>
                         );

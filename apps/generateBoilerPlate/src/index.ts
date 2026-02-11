@@ -76,21 +76,12 @@ function buildBoilerPlate(language:string, langType:Record<any,any>, schema:Stru
     return ""
 }
 
-export function generateFullCode(language : 'CPP' | 'JS' | 'RUST', schemPath:string, userCode:string, problemName:string){
+export function generateFullCode(language : 'CPP' | 'JS' | 'RUST', schema:Structure, userCode:string, problemName:string){
     const languageMapper = mapper[language]
   
   if(!languageMapper){
         throw Error("Invalid or unsupported language")
   }
-
-  const schemaRaw = fs.readFileSync(schemPath,'utf-8')
-
-  if(!schemaRaw){
-    throw Error('Invalid Schema Path')
-  }
-
-const schema:Structure = JSON.parse(schemaRaw)
-
   const inputs = schema.inputs.map((i) => {
     
     const varType = languageMapper[i.type]

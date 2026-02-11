@@ -1,1 +1,0 @@
-{"name":"sumoftwo","inputs":[{"name":"numA","type":"int"},{"name":"numB","type":"int"}],"output":{"type":"int"}}

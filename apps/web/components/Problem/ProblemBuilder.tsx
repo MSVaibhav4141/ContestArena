@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { createProblemAction, submitTestCases } from "../../app/actions/action";
+import { createProblemAction, submitProblem, submitTestCases } from "../../app/actions/action";
 import { Monaco } from "@monaco-editor/react";
 import {
   BaseType,
@@ -59,7 +59,7 @@ export default function ProblemForm() {
   const [problemId, setProblemId] = useState<null | string>(null);
   const [cases, setCases] = useState<TestCase[]>([]);
   const [codevale, setCode] = useState<BoilerplateCode[] | null>(null);
-  
+  const [sudId, setSubmissionId] = useState<string>();
   const [tcResult, setResult] = useState<any>(null);
   const [codevaleCurrent, setCodeCurrent] = useState<{
     language: string;
@@ -311,6 +311,9 @@ export default function ProblemForm() {
   const handleFinalSubmit = async () => {
     if (!codevaleCurrent) return;
 
+    // if(tcResult.submissionStatus.status === "ACCEPTED"){
+    //   // await submitProblem()
+    // }
     // 🔥 1. START LOADING & CLEAR OLD RESULTS
     setIsEvaluating(true);
     setResult(null);
@@ -325,7 +328,7 @@ export default function ProblemForm() {
     const subId = crypto.randomUUID();
 
     try {
-        await submitTestCases({
+         await submitTestCases({
           subId,
           cases,
           params,
@@ -342,9 +345,11 @@ export default function ProblemForm() {
         console.log("Finalize & Publish Complete");
     } catch (error) {
         console.error("Submission failed", error);
+        setIsEvaluating(false);
     } finally {
         // 🔥 3. STOP LOADING
         setIsEvaluating(false);
+        console.log('stopped')
     }
   };
 
@@ -570,7 +575,7 @@ export default function ProblemForm() {
                           Evaluating...
                         </>
                       ) : (
-                        "Check Test Cases"
+                        <>{tcResult?.submissionStatus.status === "ACCEPTED" ? "Submit Problem" : "Check Test Cases"}</>
                       )}
                     </button>
                   </div>

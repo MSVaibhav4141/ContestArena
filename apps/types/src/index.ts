@@ -51,6 +51,8 @@ const StructureInputSchema = z.object({
     name:z.string(),
     type: z.enum(ALL_VALID_STRINGS)
 })
+
+export type StructureParams = z.infer<typeof StructureInputSchema>
 export const StructureSchema = z.object({
     name: z.string(),
     inputs:z.array(StructureInputSchema),
@@ -103,6 +105,9 @@ export const J0TestSchema = z.object({
   expected_output: z.string()
 });
 
+export interface ProblemSubmission {
+    submissionId:string
+}
 // ---------------------------------------------------------
 // 3. INFERRED TYPES (The "Single Source of Truth")
 // ---------------------------------------------------------

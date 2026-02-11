@@ -35,6 +35,8 @@ model Problem {
   updatedAt    DateTime     @updatedAt
   createdBy    String
   hidden       Boolean      @default(false)
+  isApproved   SubmissionStatus @default(PENDING)
+  testCase     String
   difficulty   Difficulty
   creator      User         @relation("CreatedBy", fields: [createdBy], references: [id])
   user         User         @relation(fields: [userId], references: [id])
@@ -68,7 +70,6 @@ model Submission {
   memoryTaken Int?             @default(0)
   timeTaken   Float?           @default(0)
   code        String
-  fullCode    String
   language    Language         @relation(fields: [languageId], references: [id])
   problem     Problem          @relation(fields: [problemId], references: [id])
   user        User             @relation(fields: [userId], references: [id])
