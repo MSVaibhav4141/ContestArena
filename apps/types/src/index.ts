@@ -18,7 +18,7 @@ const ALL_VALID_STRINGS = [
 export const BaseTypeSchema = z.enum(BASE_TYPES);
 export const SpecialTypeSchema = z.enum(SPECIAL_TYPES);
 const r = z.enum(ALL_VALID_STRINGS)
-export type ParamsTypesa =  z.infer<typeof r>
+export type OutputParams =  z.infer<typeof r>
 
 // ParamType is tricky because of the template literals (int[], int[][]). 
 // We validate this using a custom refinement or a comprehensive regex.
@@ -165,3 +165,18 @@ export type Props = z.infer<typeof ProblemFormStateSchema> & {
   handleSubmit: () => void;
 };
 
+ interface StarterCode {
+  code: string;
+  languageId: number;
+}
+
+export interface ProblemData {
+  id: string;
+  title: string;
+  description: string;
+  userId: string;
+  createdBy: string;
+  starterCodes: StarterCode[];
+  inputs:InputParam[],
+  output: OutputParams
+}

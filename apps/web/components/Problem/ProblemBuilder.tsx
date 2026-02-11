@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import { createProblemAction, submitProblem, submitTestCases } from "../../app/actions/action";
+import { useState, useRef, useEffect, useCallback, use } from "react";
+import { createProblemAction, getProblemById, submitProblem, submitTestCases } from "../../app/actions/action";
 import { Monaco } from "@monaco-editor/react";
 import {
   BaseType,
@@ -9,7 +9,8 @@ import {
   BolierPateResponse,
   ErrorResponse,
   InputParam,
-  ParamsTypesa,
+  OutputParams,
+  ProblemData,
   SpecialType,
   Structure,
   TestCase,
@@ -19,6 +20,7 @@ import TestCaseManager from "./TestCaseManager";
 import ProblemDetailsForm from "./ProblemDetailForm";
 import { Loder } from "../Loder";
 import { poll } from "./polling";
+import { useRouter } from "next/navigation";
 
 // --- Types ---
 const baseTypes: BaseType[] = [
@@ -44,27 +46,33 @@ const getLanguageFromId = (id: number): string => {
   }
 };
 
-export default function ProblemForm() {
+export default function ProblemForm({problem}:{problem?:ProblemData}) {
   // --- Business Logic State ---
-  const [problemName, setProblemName] = useState("");
-  const [problemDesc, setProblemDesc] = useState("");
-  const [params, setParams] = useState<InputParam[]>([]);
-  const [outputType, setOutputType] = useState<ParamsTypesa>("int");
+  const [problemName, setProblemName] = useState(problem?.title || "");
+  const [problemDesc, setProblemDesc] = useState(problem?.description || "");
+  const [params, setParams] = useState<InputParam[]>(problem?.inputs || []);
+  const [outputType, setOutputType] = useState<OutputParams>(problem?.output || "int");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [paramName, setParamName] = useState("");
   const [selectedBase, setSelectedBase] = useState<BaseType>("int");
   const [isArray, setIsArray] = useState(false);
   const [dimension, setDimension] = useState<1 | 2>(1);
   const [special, setSpecial] = useState<"" | SpecialType>("");
-  const [problemId, setProblemId] = useState<null | string>(null);
+  const [problemId, setProblemId] = useState<null | string>(problem?.id||null);
   const [cases, setCases] = useState<TestCase[]>([]);
-  const [codevale, setCode] = useState<BoilerplateCode[] | null>(null);
-  const [sudId, setSubmissionId] = useState<string>();
+  const [codevale, setCode] = useState<BoilerplateCode[] | null>(problem?.starterCodes || null);
   const [tcResult, setResult] = useState<any>(null);
+
+  const router = useRouter()
+  const codeCurrent = {
+      language: 'cpp',
+      code:problem?.starterCodes[0]?.code || ""
+    }
+
   const [codevaleCurrent, setCodeCurrent] = useState<{
     language: string;
     code: string;
-  } | null>(null);
+  } | null>(codeCurrent || null);
   const [isLoading, setIsLoading] = useState(false);
 
   // 🔥 NEW STATE: Track if we are currently running the tests
@@ -217,7 +225,7 @@ export default function ProblemForm() {
     setEditingId(null);
   };
 
-  const buildType = (): ParamsTypesa => {
+  const buildType = (): OutputParams => {
     if (special) return special;
     if (!isArray) return selectedBase;
     return dimension === 1 ? `${selectedBase}[]` : `${selectedBase}[][]`;
@@ -282,8 +290,9 @@ export default function ProblemForm() {
         setIsLoading(false);
         return;
       }
-
       const { startCode, problemId: pID } = response;
+
+      router.push(`/create/problem/${pID}`)
 
       if (Array.isArray(startCode) && startCode.length > 0) {
         setTimeout(() => {

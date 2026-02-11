@@ -37,6 +37,8 @@ model Problem {
   hidden       Boolean      @default(false)
   isApproved   SubmissionStatus @default(PENDING)
   testCase     String
+  inputs       Json
+  output       String
   difficulty   Difficulty
   creator      User         @relation("CreatedBy", fields: [createdBy], references: [id])
   user         User         @relation(fields: [userId], references: [id])
