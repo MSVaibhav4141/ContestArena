@@ -236,13 +236,17 @@ export async function submitProblem(props: ProblemSubmission) {
   const problemId = submission.problemId;
 }
 
-export async function getProblemById({ id }: { id?: string }) {
+export async function getProblemById({ id, userId }: { id?: string , userId?: string}) {
 
-  if(!id){
+  if(!id && !userId){
     return undefined
   }
+  console.log(userId, id)
   const problem = await prisma.problem.findUnique({
-    where: { id },
+    where: { 
+      id,
+      createdBy: userId 
+    },
     select: {
       id: true,
       title: true,
@@ -259,6 +263,8 @@ export async function getProblemById({ id }: { id?: string }) {
       output:true
     },
   });
+
+  console.log(problem)
   if(problem){
     return {...problem, inputs: problem.inputs as InputParam[], output:problem.output as OutputParams}; 
   }else{
