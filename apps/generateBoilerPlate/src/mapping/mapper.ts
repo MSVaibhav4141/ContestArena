@@ -1,4 +1,5 @@
 export const JS_TYPE_MAP = {
+  "void":      "void",
   "int": "number",
   "long": "number",
   "double": "number",
@@ -27,6 +28,7 @@ export const JS_TYPE_MAP = {
 
 export const CPP_TYPE_MAP = {
   // ===== Primitive =====
+  "void":      "void",
   "int":       "int",
   "long":      "long long",
   "double":    "double",
@@ -56,6 +58,7 @@ export const CPP_TYPE_MAP = {
 };
 
 export const RUST_TYPE_MAP = {
+  "void":      "void",
   "int": "i32",
   "long": "i64",
 
