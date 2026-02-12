@@ -1,7 +1,8 @@
-import { ProblemPayload, Structure } from "@repo/types";
+import { InputParam, LanguageType, OutputParams, ProblemPayload, Structure } from "@repo/types";
 import { CPP_TYPE_MAP, JS_TYPE_MAP, RUST_TYPE_MAP, ScalarType, Schema, StructuralType } from "./mapping/mapper"
 import fs from "fs";
 import path, { join } from "path";
+import { getParserType } from "./mapping/parserMapping";
 
 const mapper = {
     'CPP': CPP_TYPE_MAP,
@@ -82,30 +83,34 @@ export function generateFullCode(language : 'CPP' | 'JS' | 'RUST', schema:Struct
   if(!languageMapper){
         throw Error("Invalid or unsupported language")
   }
-  const inputs = schema.inputs.map((i) => {
+  const inputs = schema.inputs.map((i:Omit<InputParam,"id">) => {
     
-    const varType = languageMapper[i.type]
+    const varType = languageMapper[i.type as LanguageType]
     if(!varType){
       throw Error("Invalid Type")
     }
     
-    return `${varType} ${i.name} = readInput<${varType}>();`
-
+    const parserType = getParserType(i.type)
+    return `getline(cin, line); ${varType} ${i.name} = ${parserType}(line);`
   }).join("\n");
 
   const functionParams = schema.inputs.map(i => i.name).join(", ");;
-  const logicFunctionName = `${languageMapper[schema.output.type]} result = ${toCamelCase(problemName)}(${functionParams});`
+  const isVoid = schema.output.type === "void";
+  const logicFunctionCall = isVoid
+    ? `${toCamelCase(problemName)}(${functionParams});`  
+    :`auto result = ${toCamelCase(problemName)}(${functionParams});`
 
   if (language === 'CPP') {
-        return `
+    return `
 #include <iostream>
 #include <vector>
 #include <string>
 #include <algorithm>
 #include <map>
-#include <json.hpp> 
+#include <functional>
 #include <climits>
-#include "bridge.h" // Contains readInput, printOutput, ListNode, TreeNode
+#include "bridge.h"    // For printOutput, TreeNode*, ListNode*
+#include "parser.h"    // All parsing logic
 
 using namespace std;
 
@@ -114,31 +119,27 @@ ${userCode}
 // --- USER CODE END ---
 
 int main() {
-    // Fast I/O
     ios_base::sync_with_stdio(false);
     cin.tie(NULL);
 
     try {
-        // 1. Read Inputs
-        ${inputs}
+        string line;
+        ${inputs}   // JS generates: getline(cin,line); auto x = parseVectorInt(line); ...
 
-        // 2. Call User Function
-        // Note: We use 'auto' to handle cases where user might return something slightly different
-        // but compatible, though strict types are better.
-        ${logicFunctionName}
+        ${logicFunctionCall}   // Example: auto result = twoSum(nums, target);
 
-        // 3. Print Output
-        printOutput(result);
+        ${isVoid ? `printOutput(${functionParams.split(',')[0]})` : 'printOutput(result)'};
 
-    } catch (const exception& e) {
+    } catch(const exception& e) {
         cerr << "Runtime Error: " << e.what() << endl;
         return 1;
     }
-    
+
     return 0;
 }
 `.trim();
-    }
+}
+
 
     throw Error("Language implementation pending");
 

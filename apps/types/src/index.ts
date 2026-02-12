@@ -10,6 +10,7 @@ const SPECIAL_TYPES = ["TreeNode", "ListNode"] as const;
 const ALL_TYPES = [...BASE_TYPES, ...SPECIAL_TYPES];
 
 const ALL_VALID_STRINGS = [
+  'void',
   ...ALL_TYPES,
   ...BASE_TYPES.map(t => `${t}[]` as const),
   ...BASE_TYPES.map(t => `${t}[][]` as const),
@@ -17,10 +18,14 @@ const ALL_VALID_STRINGS = [
 
 export const BaseTypeSchema = z.enum(BASE_TYPES);
 export const SpecialTypeSchema = z.enum(SPECIAL_TYPES);
-const r = z.enum(ALL_VALID_STRINGS)
+const r = z.enum(ALL_VALID_STRINGS as unknown as  [string, ...string[]]);
 export type OutputParams =  z.infer<typeof r>
-
-// ParamType is tricky because of the template literals (int[], int[][]). 
+export type LanguageType = 
+  | "void"
+  | "int" | "long" | "double" | "bool" | "char" | "string"
+  | "TreeNode" | "ListNode"
+  | "int[]" | "long[]" | "double[]" | "bool[]" | "char[]" | "string[]"
+  | "int[][]" | "long[][]" | "double[][]" | "bool[][]" | "char[][]" | "string[][]";// ParamType is tricky because of the template literals (int[], int[][]). 
 // We validate this using a custom refinement or a comprehensive regex.
 export const ParamTypeSchema = z.string().refine((val) => {
   // Check if it is a simple BaseType

@@ -119,7 +119,7 @@ export default function ProblemDetailsForm(props: Props) {
           value={outputType}
           onChange={e => setOutputType(e.target.value)}
         >
-          {[...baseTypes, ...specialTypes, "int[]", "int[][]", "string[]", "string[][]","char[]","char[][]"].map(t => (
+          {['void',...baseTypes, ...specialTypes, "int[]", "int[][]", "string[]", "string[][]","char[]","char[][]"].map(t => (
             <option key={t}>{t}</option>
           ))}
         </select>
