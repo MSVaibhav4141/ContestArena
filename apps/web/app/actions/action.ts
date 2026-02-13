@@ -238,10 +238,9 @@ export async function submitProblem(props: ProblemSubmission) {
 
 export async function getProblemById({ id, userId }: { id?: string , userId?: string}) {
 
-  if(!id && !userId){
+  if(!id){
     return undefined
   }
-  console.log(userId, id)
   const problem = await prisma.problem.findUnique({
     where: { 
       id,
