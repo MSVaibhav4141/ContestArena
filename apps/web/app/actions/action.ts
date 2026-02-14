@@ -135,14 +135,14 @@ export async function submitTestCases(code: any) {
     problemId,
   };
 
-  // const casesJSON = cases.map((i: any) => {
-  //   const testCaseId = uuidv4();
-  //   return {
-  //     id: testCaseId,
-  //     input: i.input,
-  //     output: i.output,
-  //   };
-  // });
+  const casesJSON = cases.map((i: any) => {
+    const testCaseId = uuidv4();
+    return {
+      id: testCaseId,
+      input: i.input,
+      output: i.output,
+    };
+  });
 
   const fullCode = generateFullCode(
     codevaleCurrent.language.toUpperCase(),
@@ -151,11 +151,11 @@ export async function submitTestCases(code: any) {
     problemName,
   );
 
-  // const submissions: any = [];
-  // const testCasesArray: (TestCase & {
-  //   submissionId: string;
-  //   identity: string;
-  // })[] = [];
+  const submissions: any = [];
+  const testCasesArray: (TestCase & {
+    submissionId: string;
+    identity: string;
+  })[] = [];
 
   // await prisma.$transaction(async (txn) => {
   //   const submission = await txn.submission.create({
@@ -174,15 +174,12 @@ export async function submitTestCases(code: any) {
   //       code: String(codevaleCurrent.code),
   //     },
   //   });
-    let loopedInput = cases.map((i:any) => i.input).join('\n');
+  //   let loopedInput = `${Buffer.from(cases.length).toString("base64")}\n`;
 
-    const submissions = {
-      source_code: Buffer.from(fullCode).toString("base64"),
-        language_id: languageId,
-        stdin: Buffer.from(loopedInput).toString("base64"),
-    }
-    
-    console.log(submissions)
+  //   for(let i = 0;i < cases.length; i++){
+  //     loopedInput+=Buffer.from(cases[i].input).toString("base64")
+  //   }
+  //   console.log(loopedInput)
   //   for (let i = 0; i < cases.length; i++) {
   //     const payload = {
   //       source_code: Buffer.from(fullCode).toString("base64"),
@@ -206,24 +203,35 @@ export async function submitTestCases(code: any) {
   //   });
   // });
 
-  // //Push Testcase to s3
-  // const fileName = `problems/${slug}/test-cases.json`;
+  //Push Testcase to s3
+  const fileName = `problems/${slug}/test-cases.json`;
+  const loopedInput = `${cases.length}\n${cases.map((i:any) => i.input).join('\n')}`
+  await uploadToS3(fileName, JSON.stringify(casesJSON));
 
-  // await uploadToS3(fileName, JSON.stringify(casesJSON));
-  const submissionPayload = {
-    submissions,
-  };
+    const payload = {
+        source_code: Buffer.from(fullCode).toString("base64"),
+        language_id: languageId,
+        stdin: Buffer.from(loopedInput).toString("base64")
+    }
+    console.log(fullCode, loopedInput,'loopedinputended')
+        // callback_url: `${process.env.J0URL}:8080/update/submission/${casesJSON[i].id}`,
+  //     };
+  // const submissionPayload = {
+  //   submissions,
+  // };
+
 
   const J0URL = process.env.J0ClIENT + "/submissions?base64_encoded=true&wait=true";
-  const r = await axios.post(J0URL, submissions, {
-    headers: {
+  const response = await axios.post(J0URL, payload , {
+    headers: { 
       "Content-Type": "application/json",
     },
   });
-  console.log(fullCode)
-  console.log(r.data.stdout)
-  console.log(atob(r.data.stdout))
-  console.log(atob(r.data.compile_output))
+
+  console.log(atob(response.data.stdout),'output')
+  console.log(atob(response.data.compile_output),'compilation')
+  console.log(atob(response.data.message),'compilation')
+  console.log(response.data)
   // return { submissionId: subId };
 }
 

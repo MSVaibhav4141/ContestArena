@@ -109,8 +109,8 @@ export function generateFullCode(language : 'CPP' | 'JS' | 'RUST', schema:Struct
 #include <map>
 #include <functional>
 #include <climits>
-#include <bridge.h>    // For printOutput, TreeNode*, ListNode*
-#include <parser.h>    // All parsing logic
+#include "bridge.h"    // For printOutput, TreeNode*, ListNode*
+#include "parser.h"    // All parsing logic
 
 using namespace std;
 
@@ -122,20 +122,20 @@ int main() {
     ios_base::sync_with_stdio(false);
     cin.tie(NULL);
 
-    string line;
-    if (!getline(cin, line) || line.empty()) return 0;
     try {
-      int totalCase = stoi(line);
-
-      while(totalCase){
-        ${inputs}   // JS generates: getline(cin,line); auto x = parseVectorInt(line); ...
-  
-        ${logicFunctionCall}   // Example: auto result = twoSum(nums, target);
-  
-        ${isVoid ? `printOutput(${functionParams.split(',')[0]})` : 'printOutput(result)'};
-        cout << endl;
-        totalCase--;
-      }
+        string line;
+        if (!getline(cin, line) || line.empty()) return 0;
+        int testCases = stoi(line);
+        
+        while(testCases){
+          ${inputs}   // JS generates: getline(cin,line); auto x = parseVectorInt(line); ...
+          
+          ${logicFunctionCall}   // Example: auto result = twoSum(nums, target);
+          
+          ${isVoid ? `printOutput(${functionParams.split(',')[0]})` : 'printOutput(result)'};
+          cout << endl;
+          testCases--;
+          }
 
     } catch(const exception& e) {
         cerr << "Runtime Error: " << e.what() << endl;
