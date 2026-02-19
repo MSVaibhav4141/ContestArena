@@ -324,7 +324,7 @@ export default function ProblemForm({problem}:{problem?:ProblemData}) {
     //   // await submitProblem()
     // }
     // 🔥 1. START LOADING & CLEAR OLD RESULTS
-    setIsEvaluating(true);
+    // setIsEvaluating(true);
     setResult(null);
 
     const languageId =
@@ -337,20 +337,23 @@ export default function ProblemForm({problem}:{problem?:ProblemData}) {
     const subId = crypto.randomUUID();
 
     try {
-         await submitTestCases({
-          subId,
-          cases,
-          params,
-          problemName,
-          outputType,
-          codevaleCurrent,
-          problemId,
-          languageId,
-          language: codevaleCurrent.language,
-        });
-        
+      const timestart = Date.now()
+      await submitTestCases({
+        subId,
+        cases,
+        params,
+        problemName,
+        outputType,
+        codevaleCurrent,
+        problemId,
+        languageId,
+        language: codevaleCurrent.language,
+      });
+      
+      const timeend = Date.now()
+      console.log((timeend-timestart)/1000.0)
         // 🔥 2. WAIT FOR RESULTS via Polling
-        await poll(subId, setResult);
+        // await poll(subId, setResult);
         console.log("Finalize & Publish Complete");
     } catch (error) {
         console.error("Submission failed", error);

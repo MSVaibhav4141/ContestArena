@@ -1,86 +1,105 @@
-import 'dotenv/config'
-import { Worker } from 'bullmq';
-import express from 'express';
-import {J0Test, J0TestSchema} from '@repo/types'
-import axios from 'axios';
-const app = express()
+import "dotenv/config";
+import { Worker } from "bullmq";
+import express from "express";
+import { J0Response, J0ResponseType, J0Test, J0TestSchema } from "@repo/types";
+import axios from "axios";
+import { checkForValidOutput } from "./helper/tcDbSync";
+const app = express();
 
-
-const checkForValidOutput = (codeResult:any) => {
-    console.log(codeResult)
-}
-
-  const waitTime = ():Promise<string> => new Promise((res, rej) => {
+const waitTime = (): Promise<string> =>
+  new Promise((res, rej) => {
     setTimeout(() => {
-        res('wait time over')
+      res("wait time over");
     }, 2000);
-  })
+  });
+  
+  if (!process.env.QUEUE_HOST && !process.env.QUEUE_PORT) {
+    console.log(process.env.QUEUE_HOST ,process.env.QUEUE_PORT)
+    throw new Error("Invalid Hosts and Port provided");
+  }
+const myWorker = new Worker(
+  "myqueue",
+  async (job) => {
 
-const myWorker = new Worker('myqueue', async job => {
     const data = job.data as J0Test;
-    const isSafePayload = J0TestSchema.safeParse(data)
-    
-    if(!isSafePayload.success){
-        return false;
+    const isSafePayload = J0TestSchema.safeParse(data);
+
+    if (!isSafePayload.success) {
+      return false;
     }
-    
-    const J0URL = process.env.J0ClIENT + "/submissions/batch?base64_encoded=true";
-    
+
+    const J0URL =
+      process.env.J0ClIENT + "/submissions/batch?base64_encoded=true";
+
     const submissionPayload = {
-        submissions:[
-            {...data}
-        ]
-    }
-    console.log(isSafePayload.success, process.env.J0ClIENT)
-    const response = await axios.post(J0URL, submissionPayload , {
-        headers: { 
-            "Content-Type": "application/json",
+      submissions: [{ ...data }],
+    };
+
+    const response = await axios.post<{ token: string }[]>(
+      J0URL,
+      submissionPayload,
+      {
+        headers: {
+          "Content-Type": "application/json",
         },
-    });
+      },
+    );
 
-    const token = response.data[0].token;
-  const codeResult = [];
+    const token = response.data[0]?.token;
 
-  while(true){
+    if (!token) {
+      throw Error("Something wrong in axios response");
+    }
 
-    try{
-        console.log(`${J0URL}&token=${token}`)
-        const output =await axios.get(`${J0URL}&tokens=${token}`)
-        const payload = output.data.submissions[0]
-        const status = output.data.submissions[0].status
-        console.log(status)
-        
-        if(status.id === 1 || status.id === 2){
+    const codeResult: J0ResponseType['submissions'] = [];
+
+    while (true) {
+      try {
+        const { data } = await axios.get<J0ResponseType>(
+          `${J0URL}&tokens=${token}`,
+        );
+        console.log(data.submissions[0])
+        // if (!J0Response.safeParse(data).success) {
+        //   throw new Error("Some Error Occured in J0 Response Validation");
+        // }
+
+        const payload = data.submissions[0];
+        const status = data.submissions[0]?.status;
+
+        if (status) {
+          if(status.id === 1 || status.id === 2){
             await waitTime()
             console.log('polling')
-        }else{
-            codeResult.push(payload)
-            checkForValidOutput(codeResult);
-            break;
+          }else if(payload){
+              codeResult.push(payload);
+              checkForValidOutput(codeResult);
+              break;
+          }
+        } else {
+          throw new Error("Status or payload was undefined");
         }
-    }catch(e:any){
-        console.log(e.response,'this is error')
+      } catch (e: any) {
+        console.log(e, "this is error");
+      }
     }
-  }
-
-
-}, {
-  connection: {
-    host: '127.0.0.1',
-    port: 6381,
   },
-  concurrency: 5
-});
+  {
+    connection: {
+      host: process.env.QUEUE_HOST,
+      port: Number(process.env.QUEUE_PORT),
+    },
+    concurrency: 5,
+  },
+);
 
-myWorker.on('completed', job => {
+myWorker.on("completed", (job) => {
   console.log(`${job.id} has completed!`);
 });
 
-myWorker.on('failed', (job, err) => {
-    if(job)
-  console.log(`${job.id} has failed with ${err.message}`);
+myWorker.on("failed", (job, err) => {
+  if (job) console.log(`${job.id} has failed with ${err.message}`);
 });
 
 app.listen(3001, () => {
-    console.log("workers up")
-})
+  console.log("workers up");
+});

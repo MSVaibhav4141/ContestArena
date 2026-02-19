@@ -107,11 +107,28 @@ export const J0TestSchema = z.object({
   source_code: z.string(),
   language_id: z.number(),
   stdin: z.string(),
-  expected_output: z.string()
 });
+const status = Array.from({ length: 14 }, (_, index) => z.literal(index + 1));
+export const J0Response = z.object({
+  submissions: z.array(
+    z.object({
+      stdout: z.string() || z.null(),
+      time: z.string() || z.null(),
+      memory: z.number() || z.null(),
+      stderr: z.null() || z.string(),
+      token: z.string(),
+      compile_output: z.null() || z.string() ,
+      message: z.null() || z.string(),
+      status: z.object({
+          id: z.union(status),
+          description: z.string()
+      })
+    })
+  )
+})
 
 export interface ProblemSubmission {
-    submissionId:string
+  submissionId:string
 }
 // ---------------------------------------------------------
 // 3. INFERRED TYPES (The "Single Source of Truth")
@@ -127,6 +144,7 @@ export type BolierPateResponse = z.infer<typeof BolierPateResponseSchema>;
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 export type TestCase = z.infer<typeof TestCaseDraftSchema>;
 export type J0Test = z.infer<typeof J0TestSchema>;
+export type J0ResponseType = z.infer<typeof J0Response>
 
 // ---------------------------------------------------------
 // 4. REACT PROPS HANDLING

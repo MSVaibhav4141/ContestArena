@@ -9,6 +9,7 @@ import { auth } from "../../auth";
 import axios from "axios";
 import {
   InputParam,
+  J0Test,
   OutputParams,
   ProblemSubmission,
   Structure,
@@ -18,6 +19,7 @@ import {
 import { createSlug } from "./helpers/helper";
 import { v4 as uuidv4 } from "uuid";
 import { uploadToS3 } from "./helpers/uploadS3";
+import { Queue } from "bullmq";
 
 export async function createProblemAction(formData: Structure) {
   let problemId: string | null = formData.problemId;
@@ -206,9 +208,9 @@ export async function submitTestCases(code: any) {
   //Push Testcase to s3
   const fileName = `problems/${slug}/test-cases.json`;
   const loopedInput = `${cases.length}\n${cases.map((i:any) => i.input).join('\n')}`
-  await uploadToS3(fileName, JSON.stringify(casesJSON));
+  // await uploadToS3(fileName, JSON.stringify(casesJSON));
 
-    const payload = {
+    const payload: J0Test = {
         source_code: Buffer.from(fullCode).toString("base64"),
         language_id: languageId,
         stdin: Buffer.from(loopedInput).toString("base64")
@@ -221,18 +223,57 @@ export async function submitTestCases(code: any) {
   // };
 
 
-  const J0URL = process.env.J0ClIENT + "/submissions?base64_encoded=true&wait=true";
-  const response = await axios.post(J0URL, payload , {
-    headers: { 
-      "Content-Type": "application/json",
-    },
-  });
+  
+  const myQueue = new Queue('myqueue', {
+  connection: {
+    host: process.env.QUEUE_HOST,
+    port: Number(process.env.QUEUE_PORT)
+  },
+  
+});
 
-  console.log(atob(response.data.stdout),'output')
-  console.log(atob(response.data.compile_output),'compilation')
-  console.log(atob(response.data.message),'compilation')
-  console.log(response.data)
+const job = await myQueue.add("judge-task", payload);
+console.log("All jobs addedASSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS");
+// const TOTAL_JOBS = 10;
+
+//   const startTime = Date.now();
+//   const jobs:any = [];
+//    for (let i = 0; i < TOTAL_JOBS; i++) {
+//       jobs.push(job.id);
+
+//   }
+
+// myQueue.add('jpb1', payload)
+
+  // const J0URL = process.env.J0ClIENT + "/submissions?base64_encoded=true&wait=true";
+  // const response = await axios.post(J0URL, payload , {
+  //   headers: { 
+  //     "Content-Type": "application/json",
+  //   },
+// });   
+
+  // console.log(atob(response.data.stdout),'output')
+  // console.log(atob(response.data.compile_output),'compilation')
+  // console.log(atob(response.data.message),'compilation')
+  // console.log(response.data)
   // return { submissionId: subId };
+
+//  const interval = setInterval(async () => {
+//   const statuses = await Promise.all(
+//     jobs.map((id:any) => myQueue.getJob(id))
+//   );
+
+//   const completed = statuses.filter(j => j?.finishedOn).length;
+
+//   console.log("Completed:", completed);
+
+//   if (completed === TOTAL_JOBS) {
+//     const endTime = Date.now();
+//     console.log("Total time:", (endTime - startTime) / 1000, "seconds");
+//     clearInterval(interval);
+//   }
+// }, 1000);
+
 }
 
 export async function submitProblem(props: ProblemSubmission) {
