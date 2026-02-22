@@ -3,7 +3,7 @@ import { Worker } from "bullmq";
 import express from "express";
 import { J0Response, J0ResponseType, J0Test, J0TestSchema } from "@repo/types";
 import axios from "axios";
-import { checkForValidOutput } from "./helper/tcDbSync";
+import { outputGenerator } from "./helper/tcDbSync";
 const app = express();
 
 const waitTime = (): Promise<string> =>
@@ -17,22 +17,24 @@ const waitTime = (): Promise<string> =>
     console.log(process.env.QUEUE_HOST ,process.env.QUEUE_PORT)
     throw new Error("Invalid Hosts and Port provided");
   }
-const myWorker = new Worker(
-  "myqueue",
+
+const setterWorker = new Worker(
+  "setter-queue",
   async (job) => {
 
-    const data = job.data as J0Test;
-    const isSafePayload = J0TestSchema.safeParse(data);
+    const data = job.data as J0Test & {submissionId:string, isPublic:number};
+    const {submissionId,isPublic, ...J0Payload} = data;
 
+    const isSafePayload = J0TestSchema.safeParse({...J0Payload});
+  
     if (!isSafePayload.success) {
       return false;
     }
 
-    const J0URL =
-      process.env.J0ClIENT + "/submissions/batch?base64_encoded=true";
+    const J0URL = process.env.J0ClIENT + "/submissions/batch?base64_encoded=true";
 
     const submissionPayload = {
-      submissions: [{ ...data }],
+      submissions: [{ ...J0Payload }],
     };
 
     const response = await axios.post<{ token: string }[]>(
@@ -58,13 +60,8 @@ const myWorker = new Worker(
         const { data } = await axios.get<J0ResponseType>(
           `${J0URL}&tokens=${token}`,
         );
-        console.log(data.submissions[0])
-        // if (!J0Response.safeParse(data).success) {
-        //   throw new Error("Some Error Occured in J0 Response Validation");
-        // }
-
         const payload = data.submissions[0];
-        const status = data.submissions[0]?.status;
+        const status = payload?.status;
 
         if (status) {
           if(status.id === 1 || status.id === 2){
@@ -72,7 +69,7 @@ const myWorker = new Worker(
             console.log('polling')
           }else if(payload){
               codeResult.push(payload);
-              checkForValidOutput(codeResult);
+              outputGenerator(codeResult, submissionId, isPublic, J0Payload.stdin);
               break;
           }
         } else {
@@ -85,18 +82,23 @@ const myWorker = new Worker(
   },
   {
     connection: {
-      host: process.env.QUEUE_HOST,
-      port: Number(process.env.QUEUE_PORT),
-    },
+    host:process.env.QUEUE_HOST,
+    port:Number(process.env.QUEUE_PORT),
+    enableReadyCheck:false,
+    maxRetriesPerRequest:null
+},
     concurrency: 5,
   },
 );
 
-myWorker.on("completed", (job) => {
+setterWorker.on('error', (ee) => {
+  console.log(ee)
+})
+setterWorker.on("completed", (job) => {
   console.log(`${job.id} has completed!`);
 });
 
-myWorker.on("failed", (job, err) => {
+setterWorker.on("failed", (job, err) => {
   if (job) console.log(`${job.id} has failed with ${err.message}`);
 });
 
