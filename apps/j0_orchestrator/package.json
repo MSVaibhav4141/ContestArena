@@ -3,14 +3,13 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
-    "dev": "bun run src/index.ts",
-    "start": "bun run src/index.ts"
-  },
+  "scripts": {},
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.987.0",
+    "@repo/db": "workspace:*",
     "@repo/types": "workspace:*",
     "@types/express": "^5.0.6",
     "axios": "^1.13.4",
