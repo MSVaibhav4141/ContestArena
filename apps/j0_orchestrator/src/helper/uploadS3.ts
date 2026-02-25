@@ -17,7 +17,7 @@ export const uploadToS3 = async (fileName:string, fileBody:any) => {
     const command = new PutObjectCommand({
     Bucket: "contest-arena-test-cases",
     Key: fileName,
-    Body: fileBody,
+    Body: JSON.stringify(fileBody),
     ContentType: "application/json"
   });
 

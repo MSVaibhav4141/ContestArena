@@ -6,6 +6,7 @@ import { uploadToS3 } from "./uploadS3";
 
 type Payload = J0ResponseType['submissions'];
 type TestCaseResult = {
+    id:string,
     input?: string;
     output: string;
     isHidden: boolean;
@@ -22,127 +23,175 @@ const calcSize = (jsonObj: TestCaseResult[]) => {
     return {bytes, kb}
 }
 
+export const outputGenerator = async(codeResult: Payload, tokenWithTcUid:{isHidden:boolean ,token:string, id:string}[], subId:string) => {
 
-export const outputGenerator = async(codeResult: Payload, submissionId:string, isPublic:number, stdIn:string) => {
-    
-    const j0Response = codeResult[0] as Payload[number];
+    let err = null;
+    let status= "ACCEPTED" as "ACCEPTED" | "REJECTED" | "PENDING"
+    const resultWithUid = codeResult.map((i) => {
+        const uuidForToken = tokenWithTcUid.find(tc => tc.token === i.token)
 
-    const statusId = j0Response?.status.id
-    const j0Output = j0Response?.stdout ?? ""
-    const j0OutputDecoded = Buffer.from(j0Output,'base64').toString('utf8').split('\n').slice(0,-1) //to remove last element
-    const stdInDecoded    = Buffer.from(stdIn, 'base64').toString('utf-8').split('\n').splice(1) //Since at index will be no of tc
-    let totalAcceptedTc = 0;
-    let totalRejectedTc = 0;
-
-    console.log(codeResult, j0OutputDecoded)
-   
-    
-    let result = j0OutputDecoded.map((ele, index) => {
-        if(ele){
-            return {
-                input:stdInDecoded[index],
-                output:ele,
-                isHidden: index >= isPublic
-            }
+        const statusId = i.status.id
+        if(statusId > 4 ){
+            err = Buffer.from(i.compile_output ?? i.stderr ?? i.message ?? "").toString('utf-8')
+            status = "REJECTED"
+        }
+        return {
+            id:uuidForToken?.id ?? "",
+            input: Buffer.from(i.stdin ?? "", 'base64').toString('utf-8'),
+            output: Buffer.from(i.stdout ?? i.status.description , 'base64').toString('utf-8'),
+            isHidden: uuidForToken?.isHidden ?? true,
+            isErr:statusId > 4 ? 'err' : null
         }
     })
 
-    //give last value of index 
-    const {kb} = calcSize(result)
 
-    if(statusId === 5 || statusId > 6){
-        const errInput = stdInDecoded[result.length]
-        result.push({
-            input:errInput,
-            output:'err',
-            isHidden:result.length >= isPublic
-
-        })
-    }
-    
-    console.log(kb, "kb of data  is recived")
-
-    let updation = {};
-    if(Number(kb.toFixed(2)) <= MAX_DB_KB){
-        updation = {
-                outputInline: result,
-                s3URL: null,
-                status:'ACCEPTED'
-            }
+    const sizeInKb = Number(calcSize(resultWithUid).kb.toFixed(2))
+    console.log(sizeInKb)
+    if(sizeInKb > MAX_DB_KB){   
+        //PushtoS3
     }else{
-        const filename = `problem/`
-        updation = {
-                outputInline: undefined,
-                s3URL: filename,
-                status:'ACCEPTED'
-            }
-        await uploadToS3(filename, result)
-    }
-    let err = Buffer.from(j0Response.compile_output ?? j0Response.stderr ?? "", 'base64').toString('utf-8');
-
-    switch (statusId) {
-        case 5:
-            updation = {
-                ...updation,
-                status:'REJECTED',
-                error:err
-            }
-            break;
-        case 6:
-            updation = {
-                ...updation,
-                status:'REJECTED',
-                error:err
-            }
-            break;
-        case 7:
-            updation = {
-                ...updation,
-                status:'REJECTED',
-                error:err
-            }
-            break;
-    
-        default:
-            updation = {
-                ...updation,
-                status:'REJECTED',
-                error:err
-            }
-            break;
-    }
-  
-
         await prisma.submission.update({
-            where: {
-                id: submissionId
+            where:{
+                id:subId
             },
-            data:updation
+            data:{
+                outputInline:resultWithUid,
+                error:err,
+                status
+            }
         })
-    
+    }
 
-    // let expectedOutput;
-
-    // const correctOutput = output.filter((i, index) => {
-    //     if(index < isPublic){
-    //         if(String(i) === String(j0Output[index])){
-    //             result.push({
-    //                 success:true,
-    //                 output: j0Output[index] 
-    //             })
-    //         }else{
-    //             result.push({
-    //                 success:false,
-    //                 output: j0Output[index] 
-    //             })
-    //         }
-    //     }
-    //     return String(i) === String(j0OutputDecoded[index] ?? "")
-    // })
-    
-    // totalAcceptedTc = correctOutput.length;
-    // totalRejectedTc = output.length - totalAcceptedTc;
-
-    // console.log(totalAcceptedTc, totalRejectedTc, j0OutputDecoded)
-    
 }
+
+// export const outputGenerator = async(codeResult: Payload, submissionId:string, isPublic:number, stdIn:string) => {
+    
+//     const j0Response = codeResult[0] as Payload[number];
+
+//     const statusId = j0Response?.status.id
+//     const j0Output = j0Response?.stdout ?? ""
+//     const j0OutputDecoded = Buffer.from(j0Output,'base64').toString('utf8').split('\n\n').slice(0,-1) //to remove last element
+//     const stdInDecoded    = Buffer.from(stdIn, 'base64').toString('utf-8').split('\n').splice(1) //Since at index will be no of tc
+//     let totalAcceptedTc = 0;
+//     let totalRejectedTc = 0;
+
+//     console.log(codeResult, j0OutputDecoded, Buffer.from(j0Output,'base64').toString('utf8'), ';dsfkjsndjkfbsjkdfksndf')
+   
+    
+//     let result = j0OutputDecoded.map((ele, index) => {
+//         if(ele){
+//             return {
+//                 input:stdInDecoded[index],
+//                 output:ele,
+//                 isHidden: index >= isPublic
+//             }
+//         }
+//     })
+
+//     //give last value of index 
+//     const {kb} = calcSize(result)
+
+//     if(statusId === 5 || statusId > 6){
+//         const errInput = stdInDecoded[result.length]
+//         result.push({
+//             input:errInput,
+//             output:'err',
+//             isHidden:result.length >= isPublic
+
+//         })
+//     }
+    
+//     console.log(kb, "kb of data  is recived")
+
+
+//     let updation = {};
+//     if(Number(kb.toFixed(2)) <= MAX_DB_KB){
+//         updation = {
+//                 outputInline: result,
+//                 s3URL: null,
+//                 status:'ACCEPTED'
+//             }
+//     }else{
+//         const filename = `problem/${submissionId}/generate.json`
+//         updation = {
+//                 outputInline: null,
+//                 s3URL: filename,
+//                 status:'ACCEPTED'
+//             }
+//         await uploadToS3(filename, result)
+//     }
+//     let err = Buffer.from(j0Response.compile_output ?? j0Response.stderr ??j0Response.message ?? "", 'base64').toString('utf-8');
+
+//     switch (statusId) {
+//         case 3:
+//             updation = {
+//                 ...updation,
+//                 status:'ACCEPTED',
+//                 error:null
+//             }
+//             break;
+//         case 5:
+//             updation = {
+//                 ...updation,
+//                 status:'REJECTED',
+//                 error:err
+//             }
+//             break;
+//         case 6:
+//             updation = {
+//                 ...updation,
+//                 status:'REJECTED',
+//                 error:err
+//             }
+//             break;
+//         case 7:
+//             updation = {
+//                 ...updation,
+//                 status:'REJECTED',
+//                 error:err
+//             }
+//             break;
+    
+//         default:
+//             updation = {
+//                 ...updation,
+//                 status:'REJECTED',
+//                 error:err
+//             }
+//             break;
+//     }
+//     console.log(updation)
+
+//         await prisma.submission.update({
+//             where: {
+//                 id: submissionId
+//             },
+//             data:updation
+//         })
+    
+
+//     // let expectedOutput;
+
+//     // const correctOutput = output.filter((i, index) => {
+//     //     if(index < isPublic){
+//     //         if(String(i) === String(j0Output[index])){
+//     //             result.push({
+//     //                 success:true,
+//     //                 output: j0Output[index] 
+//     //             })
+//     //         }else{
+//     //             result.push({
+//     //                 success:false,
+//     //                 output: j0Output[index] 
+//     //             })
+//     //         }
+//     //     }
+//     //     return String(i) === String(j0OutputDecoded[index] ?? "")
+//     // })
+    
+//     // totalAcceptedTc = correctOutput.length;
+//     // totalRejectedTc = output.length - totalAcceptedTc;
+
+//     // console.log(totalAcceptedTc, totalRejectedTc, j0OutputDecoded)
+    
+// }
