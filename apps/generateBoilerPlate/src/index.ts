@@ -77,28 +77,22 @@ function buildBoilerPlate(language:string, langType:Record<any,any>, schema:Stru
     return ""
 }
 
-export function generateFullCode(language : 'CPP' | 'JS' | 'RUST', schema:Structure, userCode:string, problemName:string){
-    const languageMapper = mapper[language]
-  
-  if(!languageMapper){
-        throw Error("Invalid or unsupported language")
-  }
-  const inputs = schema.inputs.map((i:Omit<InputParam,"id">) => {
-    
+export function generateFullCode(language: 'CPP' | 'JS' | 'RUST', schema: Structure, userCode: string, problemName: string) {
+  const languageMapper = mapper[language]
+  if (!languageMapper) throw Error("Invalid or unsupported language")
+
+  const inputs = schema.inputs.map((i: Omit<InputParam, "id">) => {
     const varType = languageMapper[i.type as LanguageType]
-    if(!varType){
-      throw Error("Invalid Type")
-    }
-    
+    if (!varType) throw Error("Invalid Type")
     const parserType = getParserType(i.type)
     return `getline(cin, line); ${varType} ${i.name} = ${parserType}(line);`
   }).join("\n");
 
-  const functionParams = schema.inputs.map(i => i.name).join(", ");;
+  const functionParams = schema.inputs.map(i => i.name).join(", ");
   const isVoid = schema.output.type === "void";
   const logicFunctionCall = isVoid
-    ? `${toCamelCase(problemName)}(${functionParams});`  
-    :`auto result = ${toCamelCase(problemName)}(${functionParams});`
+    ? `${toCamelCase(problemName)}(${functionParams});`
+    : `auto result = ${toCamelCase(problemName)}(${functionParams});`
 
   if (language === 'CPP') {
     return `
@@ -109,14 +103,12 @@ export function generateFullCode(language : 'CPP' | 'JS' | 'RUST', schema:Struct
 #include <map>
 #include <functional>
 #include <climits>
-#include "bridge.h"    // For printOutput, TreeNode*, ListNode*
-#include "parser.h"    // All parsing logic
+#include "bridge.h"
+#include "parser.h"
 
 using namespace std;
 
-// --- USER CODE START ---
 ${userCode}
-// --- USER CODE END ---
 
 int main() {
     ios_base::sync_with_stdio(false);
@@ -124,18 +116,13 @@ int main() {
 
     try {
         string line;
-        if (!getline(cin, line) || line.empty()) return 0;
-        int testCases = stoi(line);
-        
-        while(testCases){
-          ${inputs}   // JS generates: getline(cin,line); auto x = parseVectorInt(line); ...
-          
-          ${logicFunctionCall}   // Example: auto result = twoSum(nums, target);
-          
-          ${isVoid ? `printOutput(${functionParams.split(',')[0]})` : 'printOutput(result)'};
-          cout << endl;
-          testCases--;
-          }
+
+        // NO while(t--) loop — reads exactly ONE test case and exits
+        ${inputs}
+
+        ${logicFunctionCall}
+
+        ${isVoid ? `printOutput(${functionParams.split(',')[0]})` : 'printOutput(result)'};
 
     } catch(const exception& e) {
         cerr << "Runtime Error: " << e.what() << endl;
@@ -143,13 +130,10 @@ int main() {
     }
 
     return 0;
-}
-`.trim();
-}
+}`.trim();
+  }
 
-
-    throw Error("Language implementation pending");
-
+  throw Error("Language implementation pending");
 }
 
 
