@@ -1,13 +1,12 @@
 import axios from "axios";
 import { Dispatch } from "react";
-
 function sleep(ms: number) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-export async function poll(id: string, setResult: Dispatch<any>) {
+export async function poll(id: string, setResult: Dispatch<any>, jobId:string) {
   let interval = 1000;
-  const MAX_TOTAL_TIME = 20000; 
+  const MAX_TOTAL_TIME = 2000000; 
   const startTime = Date.now();
 
   while (Date.now() - startTime < MAX_TOTAL_TIME) {
@@ -16,12 +15,13 @@ export async function poll(id: string, setResult: Dispatch<any>) {
         await sleep(800);
         continue;
       }
-
-      const res = await axios(`/api/submissions/${id}`);
+      const res = await axios(`/api/submissions/${jobId}/${id}`);
       const data = res.data;
-      setResult(data);
+      console.log(data.jobProgress)
 
       if (["ACCEPTED", "REJECTED"].includes(data.submissionStatus.status)) {
+        console.log(data)
+        setResult(data);
         return data;
       }
 
