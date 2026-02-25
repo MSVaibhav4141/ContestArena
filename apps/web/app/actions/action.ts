@@ -243,3 +243,20 @@ export async function getProblemById({ id, userId }: { id?: string , userId?: st
     return undefined
   }
 }
+
+export async function getSubmissionById({id, userId}: { id?: string , userId?: string}) {
+  const data =  await prisma.submission.findFirst({
+    where:{
+      problemId:id
+    },
+    select:{
+      languageId:true,
+      code:true
+    }
+  })
+  
+  return {
+    code: data?.code ??  "",
+    language: data?.languageId === 1 ? 'cpp' : (data?.languageId === 2 ? 'rust' : 'javascript')
+  }
+}
