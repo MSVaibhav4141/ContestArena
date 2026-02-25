@@ -25,20 +25,21 @@ const calcSize = (jsonObj: TestCaseResult[]) => {
 
 export const outputGenerator = async(codeResult: Payload, tokenWithTcUid:{isHidden:boolean ,token:string, id:string}[], subId:string) => {
 
-    let err = null;
+    let err:string = "";
     let status= "ACCEPTED" as "ACCEPTED" | "REJECTED" | "PENDING"
     const resultWithUid = codeResult.map((i) => {
         const uuidForToken = tokenWithTcUid.find(tc => tc.token === i.token)
 
         const statusId = i.status.id
         if(statusId > 4 ){
-            err = Buffer.from(i.compile_output ?? i.stderr ?? i.message ?? "").toString('utf-8')
+            const rawError = i.compile_output || i.stderr || i.message || "";
+            err = Buffer.from(rawError,'base64').toString('utf-8')
             status = "REJECTED"
         }
         return {
             id:uuidForToken?.id ?? "",
             input: Buffer.from(i.stdin ?? "", 'base64').toString('utf-8'),
-            output: Buffer.from(i.stdout ?? i.status.description , 'base64').toString('utf-8'),
+            output: i.stdout ? Buffer.from(i.stdout, 'base64').toString('utf-8') : err,
             isHidden: uuidForToken?.isHidden ?? true,
             isErr:statusId > 4 ? 'err' : null
         }
@@ -49,7 +50,21 @@ export const outputGenerator = async(codeResult: Payload, tokenWithTcUid:{isHidd
     console.log(sizeInKb)
     if(sizeInKb > MAX_DB_KB){   
         //PushtoS3
+        const path = `problem/${subId}/generate.json`
+        await uploadToS3(path, JSON.stringify(resultWithUid))
+        await prisma.submission.update({
+            where:{
+                id:subId
+            },
+            data:{
+                outputInline:{},
+                error:err,
+                status,
+                s3URL:path
+            }
+        })
     }else{
+        console.log(resultWithUid)
         await prisma.submission.update({
             where:{
                 id:subId
@@ -57,7 +72,8 @@ export const outputGenerator = async(codeResult: Payload, tokenWithTcUid:{isHidd
             data:{
                 outputInline:resultWithUid,
                 error:err,
-                status
+                status,
+                s3URL:null
             }
         })
     }
