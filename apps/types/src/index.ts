@@ -117,6 +117,7 @@ export const J0Response = z.object({
       memory: z.number() || z.null(),
       stderr: z.null() || z.string(),
       token: z.string(),
+      stdin:z.string(),
       compile_output: z.null() || z.string() ,
       message: z.null() || z.string(),
       status: z.object({
@@ -202,4 +203,9 @@ export interface ProblemData {
   starterCodes: StarterCode[];
   inputs:InputParam[],
   output: OutputParams
+}
+
+export interface SubmissionData {
+  code:string ,
+  language:string
 }

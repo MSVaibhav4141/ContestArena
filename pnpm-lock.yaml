@@ -48,6 +48,12 @@ importers:
 
   apps/j0_orchestrator:
     dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.987.0
+        version: 3.987.0
+      '@repo/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@repo/types':
         specifier: workspace:*
         version: link:../types
