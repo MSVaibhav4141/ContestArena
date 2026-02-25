@@ -13,6 +13,7 @@ import {
   ProblemData,
   SpecialType,
   Structure,
+  SubmissionData,
   TestCase,
 } from "@repo/types";
 import CodeEditorPanel from "./CodeBuilder";
@@ -46,8 +47,10 @@ const getLanguageFromId = (id: number): string => {
   }
 };
 
-export default function ProblemForm({problem}:{problem?:ProblemData}) {
+export default function ProblemForm({problem, submissionData}:{problem?:ProblemData, submissionData:SubmissionData}) {
   // --- Business Logic State ---
+
+  
   const [problemName, setProblemName] = useState(problem?.title || "");
   const [problemDesc, setProblemDesc] = useState(problem?.description || "");
   const [params, setParams] = useState<InputParam[]>(problem?.inputs || []);
@@ -72,7 +75,7 @@ export default function ProblemForm({problem}:{problem?:ProblemData}) {
   const [codevaleCurrent, setCodeCurrent] = useState<{
     language: string;
     code: string;
-  } | null>(codeCurrent || null);
+  } | null>(submissionData || codeCurrent || null);
   const [isLoading, setIsLoading] = useState(false);
 
   // 🔥 NEW STATE: Track if we are currently running the tests
@@ -326,7 +329,12 @@ export default function ProblemForm({problem}:{problem?:ProblemData}) {
     // 🔥 1. START LOADING & CLEAR OLD RESULTS
     // setIsEvaluating(true);
     setResult(null);
-
+    let isPublic = 0;
+    for (const tc of cases) {
+      if (!tc.isHidden) isPublic++;
+    }    
+    const sortedTestCases = cases.sort((a, b) => Number(a.isHidden) - Number(b.isHidden));
+    setCases(sortedTestCases)
     const languageId =
       codevaleCurrent.language === "cpp"
         ? 54
@@ -334,12 +342,10 @@ export default function ProblemForm({problem}:{problem?:ProblemData}) {
         ? 63
         : 42;
 
-    const subId = crypto.randomUUID();
 
     try {
       const timestart = Date.now()
-      await submitTestCases({
-        subId,
+      const subId = await submitTestCases({
         cases,
         params,
         problemName,
@@ -348,13 +354,17 @@ export default function ProblemForm({problem}:{problem?:ProblemData}) {
         problemId,
         languageId,
         language: codevaleCurrent.language,
+        isPublic
       });
       
       const timeend = Date.now()
       console.log((timeend-timestart)/1000.0)
         // 🔥 2. WAIT FOR RESULTS via Polling
-        // await poll(subId, setResult);
+        setIsEvaluating(true)
+        if(subId && subId.jobId)
+          await poll(subId.subId, setResult, subId.jobId);
         console.log("Finalize & Publish Complete");
+        setIsEvaluating(false)
     } catch (error) {
         console.error("Submission failed", error);
         setIsEvaluating(false);
@@ -543,7 +553,7 @@ export default function ProblemForm({problem}:{problem?:ProblemData}) {
                       params={params}
                       cases={cases}
                       setCases={setCases}
-                      tcResult={tcResult}
+                      tcResult={tcResult?.submissionStatus}
                       isEvaluating={isEvaluating} // 🔥 PASSING THE PROP HERE
                     />
                   </div>
