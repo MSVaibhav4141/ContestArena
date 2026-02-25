@@ -1,6 +1,7 @@
 // app/problems/new/actions.ts
 "use server";
 import { prisma } from "@repo/db/prisma";
+import queue from "@repo/db/queue"
 import {
   generateBoilerPlate,
   generateFullCode,
@@ -9,17 +10,13 @@ import { auth } from "../../auth";
 import axios from "axios";
 import {
   InputParam,
-  J0Test,
   OutputParams,
   ProblemSubmission,
   Structure,
   StructureParams,
-  TestCase,
 } from "@repo/types";
 import { createSlug } from "./helpers/helper";
-import { v4 as uuidv4 } from "uuid";
-import { uploadToS3 } from "./helpers/uploadS3";
-import { Queue } from "bullmq";
+
 
 export async function createProblemAction(formData: Structure) {
   let problemId: string | null = formData.problemId;
@@ -106,22 +103,20 @@ export async function submitTestCases(code: any) {
   const {
     cases,
     params,
-    subId,
     problemName,
     outputType,
     codevaleCurrent,
     problemId,
     language,
     languageId,
+    isPublic
   } = code;
 
   const session = await auth();
 
   const user = session?.user.id;
   if (!user) {
-    return {
-      msg: "Unauthorized",
-    };
+    return 
   }
 
   const slug = createSlug(problemName);
@@ -137,143 +132,61 @@ export async function submitTestCases(code: any) {
     problemId,
   };
 
-  const casesJSON = cases.map((i: any) => {
-    const testCaseId = uuidv4();
-    return {
-      id: testCaseId,
-      input: i.input,
-      output: i.output,
-    };
-  });
-
   const fullCode = generateFullCode(
     codevaleCurrent.language.toUpperCase(),
     schema,
     codevaleCurrent.code,
     problemName,
   );
+  console.log(problemId)
 
-  const submissions: any = [];
-  const testCasesArray: (TestCase & {
-    submissionId: string;
-    identity: string;
-  })[] = [];
+  const subId = await prisma.$transaction(async (txn) => {
+    const {id} = await txn.submission.upsert({
+      where:{
+      problemId: problemId  
+      },
+      create:{
+        userId: user,
+        problemId,
+        languageId:
+          language === "cpp"
+            ? 1
+            : language === "rust"
+              ? 2
+              : language === "javascript"
+                ? 3
+                : 1,
+        code: String(codevaleCurrent.code),
+      },
+      update: {
+        status:'PENDING',
+        languageId:
+          language === "cpp"
+            ? 1
+            : language === "rust"
+              ? 2
+              : language === "javascript"
+                ? 3
+                : 1,
+        code: String(codevaleCurrent.code),
+      },
+    });
+    return id;
+  });
 
-  // await prisma.$transaction(async (txn) => {
-  //   const submission = await txn.submission.create({
-  //     data: {
-  //       id: subId,
-  //       userId: user,
-  //       problemId,
-  //       languageId:
-  //         language === "cpp"
-  //           ? 1
-  //           : language === "rust"
-  //             ? 2
-  //             : language === "javascript"
-  //               ? 3
-  //               : 1,
-  //       code: String(codevaleCurrent.code),
-  //     },
-  //   });
-  //   let loopedInput = `${Buffer.from(cases.length).toString("base64")}\n`;
-
-  //   for(let i = 0;i < cases.length; i++){
-  //     loopedInput+=Buffer.from(cases[i].input).toString("base64")
-  //   }
-  //   console.log(loopedInput)
-  //   for (let i = 0; i < cases.length; i++) {
-  //     const payload = {
-  //       source_code: Buffer.from(fullCode).toString("base64"),
-  //       language_id: languageId,
-  //       stdin: Buffer.from(cases[i].input).toString("base64"),
-  //       expected_output: Buffer.from(cases[i].output).toString("base64"),
-  //       callback_url: `${process.env.J0URL}:8080/update/submission/${casesJSON[i].id}`,
-  //     };
-
-  //     submissions.push(payload);
-
-  //     const tcPaylaod = {
-  //       ...casesJSON[i],
-  //       identity: cases[i].id,
-  //       submissionId: submission.id,
-  //     };
-  //     testCasesArray.push(tcPaylaod);
-  //   }
-  //   await txn.testCases.createMany({
-  //     data: testCasesArray,
-  //   });
-  // });
-
-  //Push Testcase to s3
-  const fileName = `problems/${slug}/test-cases.json`;
-  const loopedInput = `${cases.length}\n${cases.map((i:any) => i.input).join('\n')}`
-  // await uploadToS3(fileName, JSON.stringify(casesJSON));
-
-    const payload: J0Test = {
-        source_code: Buffer.from(fullCode).toString("base64"),
-        language_id: languageId,
-        stdin: Buffer.from(loopedInput).toString("base64")
+    const queuePayload = {
+      cases,
+      languageId,
+      subId,
+      fullCode
     }
-    console.log(fullCode, loopedInput,'loopedinputended')
-        // callback_url: `${process.env.J0URL}:8080/update/submission/${casesJSON[i].id}`,
-  //     };
-  // const submissionPayload = {
-  //   submissions,
-  // };
 
-
-  
-  const myQueue = new Queue('myqueue', {
-  connection: {
-    host: process.env.QUEUE_HOST,
-    port: Number(process.env.QUEUE_PORT)
-  },
-  
-});
-
-const job = await myQueue.add("judge-task", payload);
-console.log("All jobs addedASSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS");
-// const TOTAL_JOBS = 10;
-
-//   const startTime = Date.now();
-//   const jobs:any = [];
-//    for (let i = 0; i < TOTAL_JOBS; i++) {
-//       jobs.push(job.id);
-
-//   }
-
-// myQueue.add('jpb1', payload)
-
-  // const J0URL = process.env.J0ClIENT + "/submissions?base64_encoded=true&wait=true";
-  // const response = await axios.post(J0URL, payload , {
-  //   headers: { 
-  //     "Content-Type": "application/json",
-  //   },
-// });   
-
-  // console.log(atob(response.data.stdout),'output')
-  // console.log(atob(response.data.compile_output),'compilation')
-  // console.log(atob(response.data.message),'compilation')
-  // console.log(response.data)
-  // return { submissionId: subId };
-
-//  const interval = setInterval(async () => {
-//   const statuses = await Promise.all(
-//     jobs.map((id:any) => myQueue.getJob(id))
-//   );
-
-//   const completed = statuses.filter(j => j?.finishedOn).length;
-
-//   console.log("Completed:", completed);
-
-//   if (completed === TOTAL_JOBS) {
-//     const endTime = Date.now();
-//     console.log("Total time:", (endTime - startTime) / 1000, "seconds");
-//     clearInterval(interval);
-//   }
-// }, 1000);
-
+    const myQueue = queue('setter-queue')
+    myQueue.on('error', (e) => {
+      console.log(e)
+    })
+    const job = await myQueue.add("judge-task", queuePayload);
+    return {subId, jobId:job.id}
 }
 
 export async function submitProblem(props: ProblemSubmission) {
