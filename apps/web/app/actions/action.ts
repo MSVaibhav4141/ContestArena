@@ -1,6 +1,7 @@
 // app/problems/new/actions.ts
 "use server";
 import { prisma } from "@repo/db/prisma";
+import queue from "@repo/db/queue"
 import {
   generateBoilerPlate,
   generateFullCode,
@@ -13,11 +14,9 @@ import {
   ProblemSubmission,
   Structure,
   StructureParams,
-  TestCase,
 } from "@repo/types";
 import { createSlug } from "./helpers/helper";
-import { v4 as uuidv4 } from "uuid";
-import { uploadToS3 } from "./helpers/uploadS3";
+
 
 export async function createProblemAction(formData: Structure) {
   let problemId: string | null = formData.problemId;
@@ -104,22 +103,20 @@ export async function submitTestCases(code: any) {
   const {
     cases,
     params,
-    subId,
     problemName,
     outputType,
     codevaleCurrent,
     problemId,
     language,
     languageId,
+    isPublic
   } = code;
 
   const session = await auth();
 
   const user = session?.user.id;
   if (!user) {
-    return {
-      msg: "Unauthorized",
-    };
+    return 
   }
 
   const slug = createSlug(problemName);
@@ -135,32 +132,20 @@ export async function submitTestCases(code: any) {
     problemId,
   };
 
-  const casesJSON = cases.map((i: any) => {
-    const testCaseId = uuidv4();
-    return {
-      id: testCaseId,
-      input: i.input,
-      output: i.output,
-    };
-  });
-
   const fullCode = generateFullCode(
     codevaleCurrent.language.toUpperCase(),
     schema,
     codevaleCurrent.code,
     problemName,
   );
+  console.log(problemId)
 
-  const submissions: any = [];
-  const testCasesArray: (TestCase & {
-    submissionId: string;
-    identity: string;
-  })[] = [];
-
-  await prisma.$transaction(async (txn) => {
-    const submission = await txn.submission.create({
-      data: {
-        id: subId,
+  const subId = await prisma.$transaction(async (txn) => {
+    const {id} = await txn.submission.upsert({
+      where:{
+      problemId: problemId  
+      },
+      create:{
         userId: user,
         problemId,
         languageId:
@@ -173,46 +158,35 @@ export async function submitTestCases(code: any) {
                 : 1,
         code: String(codevaleCurrent.code),
       },
+      update: {
+        status:'PENDING',
+        languageId:
+          language === "cpp"
+            ? 1
+            : language === "rust"
+              ? 2
+              : language === "javascript"
+                ? 3
+                : 1,
+        code: String(codevaleCurrent.code),
+      },
     });
+    return id;
+  });
 
-    for (let i = 0; i < cases.length; i++) {
-      const payload = {
-        source_code: Buffer.from(fullCode).toString("base64"),
-        language_id: languageId,
-        stdin: Buffer.from(cases[i].input).toString("base64"),
-        expected_output: Buffer.from(cases[i].output).toString("base64"),
-        callback_url: `${process.env.J0URL}:8080/update/submission/${casesJSON[i].id}`,
-      };
-
-      submissions.push(payload);
-
-      const tcPaylaod = {
-        ...casesJSON[i],
-        identity: cases[i].id,
-        submissionId: submission.id,
-      };
-      testCasesArray.push(tcPaylaod);
+    const queuePayload = {
+      cases,
+      languageId,
+      subId,
+      fullCode
     }
-    await txn.testCases.createMany({
-      data: testCasesArray,
-    });
-  });
 
-  //Push Testcase to s3
-  const fileName = `problems/${slug}/test-cases.json`;
-
-  await uploadToS3(fileName, JSON.stringify(casesJSON));
-  const submissionPayload = {
-    submissions,
-  };
-
-  const J0URL = process.env.J0ClIENT + "/submissions/batch?base64_encoded=true";
-  await axios.post(J0URL, submissionPayload, {
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-  return { submissionId: subId };
+    const myQueue = queue('setter-queue')
+    myQueue.on('error', (e) => {
+      console.log(e)
+    })
+    const job = await myQueue.add("judge-task", queuePayload);
+    return {subId, jobId:job.id}
 }
 
 export async function submitProblem(props: ProblemSubmission) {
@@ -263,10 +237,26 @@ export async function getProblemById({ id, userId }: { id?: string , userId?: st
     },
   });
 
-  console.log(problem)
   if(problem){
     return {...problem, inputs: problem.inputs as InputParam[], output:problem.output as OutputParams}; 
   }else{
     return undefined
+  }
+}
+
+export async function getSubmissionById({id, userId}: { id?: string , userId?: string}) {
+  const data =  await prisma.submission.findFirst({
+    where:{
+      problemId:id
+    },
+    select:{
+      languageId:true,
+      code:true
+    }
+  })
+  
+  return {
+    code: data?.code ??  "",
+    language: data?.languageId === 1 ? 'cpp' : (data?.languageId === 2 ? 'rust' : 'javascript')
   }
 }

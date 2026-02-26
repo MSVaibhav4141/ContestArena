@@ -26,22 +26,22 @@ model User {
 }
 
 model Problem {
-  id           String       @id @unique @default(cuid())
+  id           String           @id @unique @default(cuid())
   title        String
   description  String
   slug         String
   userId       String
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
   createdBy    String
-  hidden       Boolean      @default(false)
+  hidden       Boolean          @default(false)
   isApproved   SubmissionStatus @default(PENDING)
   testCase     String
   inputs       Json
   output       String
   difficulty   Difficulty
-  creator      User         @relation("CreatedBy", fields: [createdBy], references: [id])
-  user         User         @relation(fields: [userId], references: [id])
+  creator      User             @relation("CreatedBy", fields: [createdBy], references: [id])
+  user         User             @relation(fields: [userId], references: [id])
   starterCodes StartCode[]
   submission   Submission[]
 }
@@ -63,29 +63,34 @@ model StartCode {
 }
 
 model Submission {
-  id          String           @id @default(cuid())
-  userId      String
-  problemId   String
-  languageId  Int
-  status      SubmissionStatus @default(PENDING)
-  createdAt   DateTime         @default(now())
-  memoryTaken Int?             @default(0)
-  timeTaken   Float?           @default(0)
-  code        String
-  language    Language         @relation(fields: [languageId], references: [id])
-  problem     Problem          @relation(fields: [problemId], references: [id])
-  user        User             @relation(fields: [userId], references: [id])
-  testcases   TestCases[]
+  id              String           @id @default(cuid())
+  userId          String
+  problemId       String           @unique
+  languageId      Int
+  totalCorrectTc  Int @default(0)
+  totalRejectedTc Int @default(0)
+  outputInline    Json?
+  s3URL           String?
+  error           String?
+  status          SubmissionStatus @default(PENDING)
+  createdAt       DateTime         @default(now())
+  memoryTaken     Int?             @default(0)
+  timeTaken       Float?           @default(0)
+  code            String
+  language        Language         @relation(fields: [languageId], references: [id])
+  problem         Problem          @relation(fields: [problemId], references: [id])
+  user            User             @relation(fields: [userId], references: [id])
+  testcases       TestCases[]
 }
 
 model TestCases {
-  id           String           @id 
+  id           String           @id
   submissionId String
   identity     String
   input        String
   output       String
   memoryTaken  Int?
-  isHidden     Boolean @default(false)
+  isHidden     Boolean          @default(false)
   timeTaken    Float?
   status       SubmissionStatus @default(PENDING)
   submissions  Submission       @relation(fields: [submissionId], references: [id])

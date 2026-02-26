@@ -1,0 +1,23 @@
+{
+  "name": "@repo/j0_orchestrator",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.987.0",
+    "@repo/db": "workspace:*",
+    "@repo/types": "workspace:*",
+    "@types/express": "^5.0.6",
+    "axios": "^1.13.4",
+    "bullmq": "^5.69.2",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*"
+  }
+}
