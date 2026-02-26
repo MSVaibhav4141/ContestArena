@@ -4,6 +4,7 @@ import FormShell from "../../../../components/Problem/ProblemForm";
 import { getProblemById, getSubmissionById } from "../../../actions/action";
 import { auth } from "../../../../auth";
 import { SubmissionData } from "@repo/types";
+import ProblemWorkspace from "../../../../components/Problem/ProblemUser";
 
 export default async function CreateProblemPage({params}:{params:Promise<{id: string[]| undefined}>}) {
   const {id} = await params;
@@ -21,7 +22,10 @@ export default async function CreateProblemPage({params}:{params:Promise<{id: st
   }
   return (
     <div className="min-h-screen bg-gray-100">
-      <FormShell problem={problemData} submissionData={submissionData}/>
+      {/* <FormShell problem={problemData} submissionData={submissionData}/> */}
+      {problemData && (
+        <ProblemWorkspace problem={problemData} />
+      )}
     </div>
   )
 }

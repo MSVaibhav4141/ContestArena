@@ -11,6 +11,7 @@ import axios from "axios";
 import {
   InputParam,
   OutputParams,
+  ProblemData,
   ProblemSubmission,
   Structure,
   StructureParams,
@@ -210,7 +211,7 @@ export async function submitProblem(props: ProblemSubmission) {
   const problemId = submission.problemId;
 }
 
-export async function getProblemById({ id, userId }: { id?: string , userId?: string}) {
+export async function getProblemById({ id, userId }: { id?: string , userId?: string}): Promise<ProblemData | undefined> {
 
   if(!id){
     return undefined
@@ -233,7 +234,8 @@ export async function getProblemById({ id, userId }: { id?: string , userId?: st
         }
       },
       inputs:true,
-      output:true
+      output:true,
+      difficulty:true
     },
   });
 
