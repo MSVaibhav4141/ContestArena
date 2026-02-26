@@ -23,6 +23,7 @@ model User {
   createdProblems Problem[]    @relation("CreatedBy")
   problemId       Problem[]
   submission      Submission[]
+  userSubmission  UserSubmission[]
 }
 
 model Problem {
@@ -44,6 +45,7 @@ model Problem {
   user         User             @relation(fields: [userId], references: [id])
   starterCodes StartCode[]
   submission   Submission[]
+  UserSubmission   UserSubmission[]
 }
 
 model Language {
@@ -51,6 +53,7 @@ model Language {
   langauage  Languages
   startCode  StartCode[]
   Submission Submission[]
+  UserSubmission UserSubmission[]
 }
 
 model StartCode {
@@ -80,9 +83,26 @@ model Submission {
   language        Language         @relation(fields: [languageId], references: [id])
   problem         Problem          @relation(fields: [problemId], references: [id])
   user            User             @relation(fields: [userId], references: [id])
-  testcases       TestCases[]
 }
 
+model UserSubmission {
+  id              String           @id @default(cuid())
+  userId          String
+  problemId       String           
+  languageId      Int
+  totalCorrectTc  Int @default(0)
+  totalRejectedTc Int @default(0)
+  error           String?
+  status          SubmissionStatus @default(PENDING)
+  createdAt       DateTime         @default(now())
+  memoryTaken     Int?             @default(0)
+  timeTaken       Float?           @default(0)
+  code            String
+  language        Language         @relation(fields: [languageId], references: [id])
+  problem         Problem          @relation(fields: [problemId], references: [id])
+  user            User             @relation(fields: [userId], references: [id])
+  testcases       TestCases[]
+}
 model TestCases {
   id           String           @id
   submissionId String
@@ -93,7 +113,7 @@ model TestCases {
   isHidden     Boolean          @default(false)
   timeTaken    Float?
   status       SubmissionStatus @default(PENDING)
-  submissions  Submission       @relation(fields: [submissionId], references: [id])
+  submissions  UserSubmission       @relation(fields: [submissionId], references: [id])
 }
 
 enum Role {
