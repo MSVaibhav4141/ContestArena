@@ -176,6 +176,7 @@ export async function submitTestCases(code: any) {
   });
 
     const queuePayload = {
+      problemId,
       cases,
       languageId,
       subId,
@@ -261,4 +262,68 @@ export async function getSubmissionById({id, userId}: { id?: string , userId?: s
     code: data?.code ??  "",
     language: data?.languageId === 1 ? 'cpp' : (data?.languageId === 2 ? 'rust' : 'javascript')
   }
+}
+
+export async function userSubmission({code, problemId, language, inputs, name, output}:{code:string, problemId:string,language:'cpp'|'javascript'|'rust', inputs: InputParam[], name:string,output:OutputParams}){
+
+  const session = await auth()
+  const user = session?.user.id
+  console.log(user)
+  if(!user){
+    return {
+      status:401,
+      msg:"Unauthorized, Kindly login"
+    }
+  }
+
+  const submission = await prisma.userSubmission.create({
+    data:{
+        userId: user,
+        problemId,
+        languageId:language === "cpp"
+            ? 1
+            : language === "rust"
+              ? 2
+              : language === "javascript"
+                ? 3
+                : 1,
+        code: String(code),
+      },
+  })
+
+  const slug = createSlug(name);
+
+  const schema: Structure = {
+    name: slug,  // <-- not required
+    inputs: inputs.map((i: any) => ({
+      name: i.name,
+      type: i.type,
+    })) as StructureParams[],
+    output: { type: output },
+    description: "", // <--- fixthus
+    problemId,
+  };
+
+  const languageName = language.toUpperCase() as  'CPP'|'JAVASCRIPT'|'RUST'
+  const fullCode = generateFullCode(
+    languageName,
+    schema,
+    code,
+    name,
+  );
+
+  const queuePayload = {
+    code:fullCode,
+    problemId,
+    language_id:54, //fix this,
+    submissionId:submission.id
+  }
+  const userQueue = queue('user-queue')
+  userQueue.on('error', (e) => {
+    console.log(e)
+  })
+  console.log(queuePayload)
+  const job = await userQueue.add('user-submission',queuePayload)
+
+  return {subId: submission.id}
 }

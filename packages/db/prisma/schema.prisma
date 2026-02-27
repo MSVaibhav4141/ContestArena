@@ -92,6 +92,7 @@ model UserSubmission {
   languageId      Int
   totalCorrectTc  Int @default(0)
   totalRejectedTc Int @default(0)
+  outputInline    Json?
   error           String?
   status          SubmissionStatus @default(PENDING)
   createdAt       DateTime         @default(now())

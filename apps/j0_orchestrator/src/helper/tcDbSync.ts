@@ -1,6 +1,6 @@
 const MAX_DB_KB = 150;
 import { prisma } from "@repo/db/prisma";
-import { J0ResponseType } from "@repo/types";
+import { J0ResponseType, TestCase } from "@repo/types";
 import { uploadToS3 } from "./uploadS3";
 
 
@@ -23,7 +23,7 @@ const calcSize = (jsonObj: TestCaseResult[]) => {
     return {bytes, kb}
 }
 
-export const outputGenerator = async(codeResult: Payload, tokenWithTcUid:{isHidden:boolean ,token:string, id:string}[], subId:string) => {
+export const outputGenerator = async(codeResult: Payload, tokenWithTcUid:{isHidden:boolean ,token:string, id:string}[], subId:string, problemId:string) => {
 
     let err:string = "";
     let status= "ACCEPTED" as "ACCEPTED" | "REJECTED" | "PENDING"
@@ -50,7 +50,7 @@ export const outputGenerator = async(codeResult: Payload, tokenWithTcUid:{isHidd
     console.log(sizeInKb)
     if(sizeInKb > MAX_DB_KB){   
         //PushtoS3
-        const path = `problem/${subId}/generate.json`
+        const path = `problem/${problemId}/generate.json`
         await uploadToS3(path, JSON.stringify(resultWithUid))
         await prisma.submission.update({
             where:{
@@ -80,6 +80,33 @@ export const outputGenerator = async(codeResult: Payload, tokenWithTcUid:{isHidd
 
 }
 
+export const resultChecker = async(coderesult: Payload, visisbleTcWithId:(Omit<TestCase,"output"> & {token:string})[],submissionId:string) =>{
+    let totalAcceptedTc = 0;
+    
+
+    const visibleCases = coderesult.filter((i) => {
+        
+        if(i.status.description === 'Accepted')totalAcceptedTc++;
+        
+        if(visisbleTcWithId.find(tc => tc.token === i.token)){
+            return true;
+        }
+    })
+
+    const totalRejectedTc = coderesult.length - totalAcceptedTc
+    
+    await prisma.userSubmission.update({
+        where:{
+            id:submissionId
+        },
+        data:{
+            outputInline: visibleCases,
+            totalCorrectTc:totalAcceptedTc,
+            totalRejectedTc,
+            status: totalRejectedTc ? "REJECTED" : "ACCEPTED"
+        }
+    })
+}
 // export const outputGenerator = async(codeResult: Payload, submissionId:string, isPublic:number, stdIn:string) => {
     
 //     const j0Response = codeResult[0] as Payload[number];
