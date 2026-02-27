@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand, S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
   if (!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY)) {
     throw Error("NO CREAD FOUND")
@@ -29,3 +29,29 @@ export const uploadToS3 = async (fileName:string, fileBody:any) => {
   }
 
 };
+
+export const fetchFromS3 = async(fileName:string) => {
+
+  if (!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY)) {
+    throw Error("NO CREAD FOUND")
+  }
+
+
+  const client = new S3Client({
+    region: "us-east-1",
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID ,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+  })
+
+      const command = new GetObjectCommand({
+      Bucket: 'contest-arena-test-cases',
+      Key: fileName
+    });
+
+    const result = await client.send(command)
+    const data = await result.Body?.transformToString() ?? JSON.stringify([])
+   
+    return JSON.parse(JSON.parse(data));
+}

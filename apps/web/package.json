@@ -20,6 +20,7 @@
     "@tailwindcss/postcss": "^4.1.18",
     "axios": "^1.13.4",
     "bullmq": "^5.69.2",
+    "lucide-react": "^0.575.0",
     "monaco-editor": "^0.55.1",
     "next": "16.1.0",
     "next-auth": "5.0.0-beta.30",

@@ -202,7 +202,8 @@ export interface ProblemData {
   createdBy: string;
   starterCodes: StarterCode[];
   inputs:InputParam[],
-  output: OutputParams
+  output: OutputParams,
+  difficulty:string
 }
 
 export interface SubmissionData {
