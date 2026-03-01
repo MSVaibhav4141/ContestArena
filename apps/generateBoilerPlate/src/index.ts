@@ -6,7 +6,7 @@ import { getParserType } from "./mapping/parserMapping";
 
 const mapper = {
     'CPP': CPP_TYPE_MAP,
-    'JS' : JS_TYPE_MAP,
+    'JAVASCRIPT' : JS_TYPE_MAP,
     'RUST': RUST_TYPE_MAP
 }
 
@@ -25,7 +25,7 @@ export function generateBoilerPlate(schemPath:string, schema ?:Structure){
     if(!isSchema){
       return false;
     }
-    const languages = ['CPP','RUST','JS'] as const;
+    const languages = ['CPP','RUST','JAVASCRIPT'] as const;
       const allStartCode = languages.map((language, index) => {  
         const langType = mapper[language]      
        const params = generateParams(isSchema, language, langType)
@@ -77,7 +77,7 @@ function buildBoilerPlate(language:string, langType:Record<any,any>, schema:Stru
     return ""
 }
 
-export function generateFullCode(language: 'CPP' | 'JS' | 'RUST', schema: Structure, userCode: string, problemName: string) {
+export function generateFullCode(language: 'CPP' | 'JAVASCRIPT' | 'RUST', schema: Structure, userCode: string, problemName: string) {
   const languageMapper = mapper[language]
   if (!languageMapper) throw Error("Invalid or unsupported language")
 
