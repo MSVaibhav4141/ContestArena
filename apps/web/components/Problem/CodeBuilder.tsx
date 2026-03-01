@@ -1,6 +1,7 @@
 import Editor, { Monaco, OnMount } from "@monaco-editor/react"
 import { useEffect, useRef } from "react"
 import * as monaco from 'monaco-editor';
+import { SubmissionLoder } from "../Loder";
 
 interface Props {
   code: string
@@ -8,10 +9,11 @@ interface Props {
   onLanguageChange: (index: number) => void
   onReset: () => void // <--- NEW PROP
   beforeMount: (monaco: Monaco) => void
-  onChange: (value: string | undefined) => void
+  onChange: (value: string | undefined) => void,
+  progress: number
 }
 
-export default function CodeEditorPanel({ code, language, onLanguageChange, onReset, beforeMount,onChange }: Props) {
+export default function CodeEditorPanel({ code, language, onLanguageChange, onReset, beforeMount,onChange, progress }: Props) {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
 
   useEffect(() => {
@@ -23,7 +25,8 @@ export default function CodeEditorPanel({ code, language, onLanguageChange, onRe
   }
   return (
     <div className="flex flex-col h-full bg-[#1e1e1e] rounded-xl overflow-hidden">
-      <div className="flex justify-between items-center px-4 py-2 bg-[#2d2d2d] text-white select-none">
+      <div className="flex justify-between items-center px-4 py-2 bg-[#2d2d2d] text-white select-none relative">
+        <SubmissionLoder progress={progress} />
         <span className="font-semibold text-sm">Solution Editor</span>
         <div className="flex items-center gap-3">
             {/* Reset Button */}
