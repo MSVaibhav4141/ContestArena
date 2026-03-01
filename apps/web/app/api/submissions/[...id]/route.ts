@@ -19,7 +19,6 @@ async function fetchFromS3(path:string){
     });
 
     const response = await s3Client.send(command);
-    // .transformToString() is the modern v3 way to handle the stream
     const data = await response.Body?.transformToString() ?? JSON.stringify([]);
 
     return JSON.parse(data);

@@ -118,8 +118,8 @@ export const J0Response = z.object({
       stderr: z.null() || z.string(),
       token: z.string(),
       stdin:z.string(),
-      compile_output: z.null() || z.string() ,
-      message: z.null() || z.string(),
+      compile_output:  z.string() ,
+      message: z.string(),
       status: z.object({
           id: z.union(status),
           description: z.string()
