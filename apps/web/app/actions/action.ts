@@ -15,6 +15,7 @@ import {
   ProblemSubmission,
   Structure,
   StructureParams,
+  TestCase,
 } from "@repo/types";
 import { createSlug } from "./helpers/helper";
 
@@ -325,5 +326,25 @@ export async function userSubmission({code, problemId, language, inputs, name, o
   console.log(queuePayload)
   const job = await userQueue.add('user-submission',queuePayload)
 
-  return {subId: submission.id}
+  return {subId: submission.id, jobId: job.id}
+}
+
+export async function getUserSubmission({problemId, userId}:{problemId:string, userId:string}){
+  const submission = await prisma.userSubmission.findMany({
+    where:{
+      problemId,
+      userId,
+      status:{
+        not:"PENDING"
+      }
+    },
+    select:{
+      totalCorrectTc:true,
+      totalRejectedTc:true,
+      outputInline:true,
+      code:true
+    }
+  })
+
+  return submission
 }

@@ -5,13 +5,20 @@ import { Monaco } from "@monaco-editor/react";
 import { ProblemData, BoilerplateCode } from "@repo/types";
 import CodeEditorPanel from "./CodeBuilder"; // Assuming you have this shared component
 import { Play, Send } from "lucide-react";
+import { userSubmission } from "../../app/actions/action";
+import { pollUser } from "./polling";
 
-interface UserWorkspaceProps {
+export interface UserWorkspaceProps {
   problem: ProblemData;
   initialCode?: BoilerplateCode; 
+  submission: {totalCorrectTc:number,
+      totalRejectedTc:number,
+      code:string,
+      outputInline:any
+    }[]
 }
 
-export default function ProblemWorkspace({ problem }: UserWorkspaceProps) {
+export default function ProblemWorkspace({ problem,submission }: UserWorkspaceProps) {
     //Some prechecks
 
     if(!(problem.starterCodes[0])){
@@ -20,16 +27,16 @@ export default function ProblemWorkspace({ problem }: UserWorkspaceProps) {
     }
 
   const [activeTab, setActiveTab] = useState<"description" | "submissions">("description");
-  const codevale:BoilerplateCode[] = problem.starterCodes ;
-  
+  const [codevale, setCodeVal] = useState(problem.starterCodes) ;
+  const [submissions, setSubmission] = useState<UserWorkspaceProps['submission']>(submission ?? [])
   const [codeCurrent, setCodeCurrent] = useState({
     language: getLanguageFromId(problem.starterCodes[0]?.languageId ?? 1),
     code: problem.starterCodes[0].code ,
   });
-  
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [consoleResult, setConsoleResult] = useState<any>(null);
 
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [consoleResult, setConsoleResult] = useState<any>(null); //<--fix this
+  const [submissionPorgress, setProgress] = useState<number>(0)
   // --- RESIZE STATE & REFS (Reused from your logic) ---
   const containerRef = useRef<HTMLDivElement>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
@@ -92,8 +99,32 @@ export default function ProblemWorkspace({ problem }: UserWorkspaceProps) {
       setIsExecuting(true);
       // TODO: Call your final submission API here (running against hidden test cases)
       console.log("Submitting code:", codeCurrent);
-      setTimeout(() => setIsExecuting(false), 2000); // Mock delay
-  };
+      const {subId, jobId} = await userSubmission({code:codeCurrent.code, problemId: problem.id, language:codeCurrent.language, inputs: problem.inputs, name:problem.title, output :problem.output})
+
+      if(!subId || !jobId){
+        alert("No ids recived")
+        return;
+      }
+      try{
+          const isSucess = await pollUser({
+            id:subId,
+            setSubmission,
+            setConsoleResult,
+            jobId,
+            setProgress
+          })
+          
+        }catch(e){
+            
+            alert("Some error occured while polling")
+            
+        }finally{
+          setProgress(100)
+
+      }
+        
+    };
+    console.log(submissionPorgress, 'progress')
   const handleEditorWillMount = (monaco: Monaco) => {
     monaco.languages.register({ id: "cpp" });
     monaco.languages.setMonarchTokensProvider("cpp", {
@@ -159,6 +190,28 @@ export default function ProblemWorkspace({ problem }: UserWorkspaceProps) {
       ],
     });
   };
+const [activeTestCase, setActiveTestCase] = useState(0);
+const formatOutput = (rawStr: string) => {
+    if (!rawStr) return "No output";
+    
+    try {
+        const parsed = JSON.parse(rawStr);
+
+        // Check if it's a 2D array (like a Sudoku board)
+        if (Array.isArray(parsed) && Array.isArray(parsed[0])) {
+            // Join each inner array into a single line string
+            const rows = parsed.map(row => `  [${row.map((cell:any) => `"${cell}"`).join(", ")}]`);
+            return `[\n${rows.join(",\n")}\n]`;
+        }
+
+        // Fallback for standard objects/arrays
+        return JSON.stringify(parsed, null, 2);
+    } catch (e) {
+        // If it's not JSON (like a simple string or error), return as is
+        return rawStr.trim();
+    }
+};
+
   return (
       <div className="min-h-screen bg-gray-100 overflow-hidden flex flex-col pt-6 px-6 pb-6">
       
@@ -200,9 +253,83 @@ export default function ProblemWorkspace({ problem }: UserWorkspaceProps) {
                       />
                   </div>
               ) : (
-                  <div className="text-center text-gray-500 mt-10 text-sm">
-                      Your past submissions will appear here.
-                  </div>
+                  <div className="flex flex-col gap-3 mt-4">
+  {submissions.length > 0 ? (
+    submissions.map((i, index) => {
+      const isPassed = i.totalRejectedTc === 0;
+      const totalTc = i.totalCorrectTc + i.totalRejectedTc;
+      
+      return (
+        <button
+          key={index}
+          onClick={() => {
+            console.log("Load submission:", index)
+            if(submissions[index])
+            setCodeCurrent({code:submissions[index].code, language:'cpp'})
+            setConsoleResult({
+            input: submissions[index]?.outputInline.map((i:any) => i.stdin),
+            output: submissions[index]?.outputInline.map((i:any) => i.stdout),
+            statusId: submissions[index]?.outputInline.map((i:any) => i.status.id),
+        })
+        }}
+          className="group flex items-center justify-between p-4 bg-[#242424] hover:bg-[#2a2a2a] border border-gray-800 hover:border-gray-700 rounded-xl transition-all duration-200 text-left"
+        >
+          <div className="flex items-center gap-4">
+            {/* Status Icon */}
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
+              isPassed ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'
+            }`}>
+              {isPassed ? '✓' : '✕'}
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2">
+                <span className={`font-bold text-sm ${isPassed ? 'text-emerald-500' : 'text-red-500'}`}>
+                  {isPassed ? 'Accepted' : 'Wrong Answer'}
+                </span>
+                <span className="text-xs text-gray-500">•</span>
+                <span className="text-xs text-gray-400">Submission {submissions.length - index}</span>
+              </div>
+              <div className="text-[11px] text-gray-500 mt-0.5">
+                {/* Fallback to 'Just now' if you don't have a date-fns helper */}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6">
+            {/* Stats */}
+            <div className="text-right">
+              <div className="text-sm font-mono text-gray-300">
+                {i.totalCorrectTc} / {totalTc}
+              </div>
+              <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">
+                Test Cases
+              </div>
+            </div>
+
+            {/* Chevron Arrow */}
+            <div className="text-gray-600 group-hover:text-gray-300 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </div>
+        </button>
+      );
+    })
+  ) : (
+    /* Empty State */
+    <div className="flex flex-col items-center justify-center py-20 px-4 border-2 border-dashed border-gray-800 rounded-2xl">
+      <div className="w-12 h-12 bg-gray-800/50 rounded-full flex items-center justify-center mb-3">
+        <svg xmlns="http://www.w3.org/2000/svg" className="text-gray-600" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+      </div>
+      <p className="text-sm text-gray-400 font-medium text-center">No submissions yet.</p>
+      <p className="text-xs text-gray-600 text-center mt-1">Submit your code to see your results here.</p>
+    </div>
+  )}
+</div>
               )}
           </div>
         </div>
@@ -234,13 +361,12 @@ export default function ProblemWorkspace({ problem }: UserWorkspaceProps) {
             </div>
             <div className="flex-1 relative">
                 <CodeEditorPanel
+                progress={submissionPorgress}
                     code={codeCurrent.code}
                     language={codeCurrent.language}
                     onReset={() => {
                         const currentLanguage = codeCurrent.language ?? "cpp"
-                        const codeIndex = currentLanguage === 'cpp' ? 0 : (currentLanguage === 'rust' ? 1 : 2)
-
-                        
+                        const codeIndex = currentLanguage === 'cpp' ? 0 : (currentLanguage === 'rust' ? 1 : 2)                    
                         codevale && setCodeCurrent(
                             {
                                 language:codeCurrent.language, 
@@ -289,9 +415,64 @@ export default function ProblemWorkspace({ problem }: UserWorkspaceProps) {
             </div>
             
             <div className="flex-1 p-4 overflow-y-auto custom-scrollbar">
-                 <div className="text-sm text-gray-500 italic">
-                     Run results and stdout will appear here...
-                 </div>
+                 <div className="flex-1 overflow-hidden flex flex-col">
+    {!consoleResult?.input?.length ? (
+        // --- EMPTY STATE ---
+        <div className="flex-1 p-4 flex items-center justify-center text-sm text-gray-500 italic">
+            Run results and stdout will appear here...
+        </div>
+    ) : (
+        // --- RESULTS STATE ---
+        <div className="flex flex-col h-full">
+            
+            {/* 1. Test Case Tabs */}
+            <div className="flex gap-2 p-3 border-b border-gray-800 overflow-x-auto custom-scrollbar">
+                {consoleResult.input.map((i: any, index: number) => 
+                    <button
+                        key={index}
+                        onClick={() => setActiveTestCase(index)}
+                        className={`px-4 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                            activeTestCase === index
+                                ? consoleResult.statusId[index] == 3 ? "bg-green-700 shadow" : "bg-red-400 opacity-90 shadow"
+                                : `${consoleResult.statusId[index] == 3 ? "bg-green-900 shadow opacity-90" : "bg-red-400 opacity-60 shadow"}text-gray-400 hover:bg-gray-800 hover:text-gray-200`
+                        }`}
+                    >
+                        Case {index + 1}
+                    </button>
+                )}
+            </div>
+
+            {/* 2. Active Test Case Details */}
+            <div className="flex-1 p-4 overflow-y-auto custom-scrollbar space-y-6">
+                
+                {/* Input Section */}
+                <div>
+                    <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                        Input
+                    </div>
+                    <div className="bg-[#1e1e1e] border border-gray-800 rounded-lg p-3">
+                        <div className="font-mono text-sm text-gray-300 overflow-x-auto custom-scrollbar">
+                            {formatOutput(consoleResult.input[activeTestCase])}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Output Section */}
+                <div>
+                    <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                        Output
+                    </div>
+                    <div className="bg-[#1e1e1e] border border-gray-800 rounded-lg p-3">
+                        <div className="font-mono text-sm text-gray-300 overflow-x-auto custom-scrollbar">
+                            {formatOutput(consoleResult.output[activeTestCase])}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    )}
+</div>
             </div>
 
             {/* Action Buttons */}
@@ -320,7 +501,7 @@ export default function ProblemWorkspace({ problem }: UserWorkspaceProps) {
 }
 
 // Helper (You likely already have this in your utils)
-const getLanguageFromId = (id: number): string => {
+const getLanguageFromId = (id: number): 'cpp'| 'rust'| 'javascript' => {
   switch (id) {
     case 1: return "cpp";
     case 2: return "rust";
