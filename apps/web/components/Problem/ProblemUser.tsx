@@ -15,7 +15,7 @@ export interface UserWorkspaceProps {
       totalRejectedTc:number,
       code:string,
       outputInline:any
-    }[]
+    }[] | []
 }
 
 export default function ProblemWorkspace({ problem,submission }: UserWorkspaceProps) {

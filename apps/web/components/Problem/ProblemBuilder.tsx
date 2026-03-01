@@ -55,6 +55,7 @@ export default function ProblemForm({problem, submissionData}:{problem?:ProblemD
   const [problemDesc, setProblemDesc] = useState(problem?.description || "");
   const [params, setParams] = useState<InputParam[]>(problem?.inputs || []);
   const [outputType, setOutputType] = useState<OutputParams>(problem?.output || "int");
+  const [submisionPorgress, setProgress] = useState<number>(0)
   const [editingId, setEditingId] = useState<string | null>(null);
   const [paramName, setParamName] = useState("");
   const [selectedBase, setSelectedBase] = useState<BaseType>("int");
@@ -362,15 +363,14 @@ export default function ProblemForm({problem, submissionData}:{problem?:ProblemD
         // 🔥 2. WAIT FOR RESULTS via Polling
         setIsEvaluating(true)
         if(subId && subId.jobId)
-          await poll(subId.subId, setResult, subId.jobId);
+          await poll(subId.subId, setResult, subId.jobId, setProgress);
         console.log("Finalize & Publish Complete");
-        setIsEvaluating(false)
-    } catch (error) {
+      } catch (error) {
         console.error("Submission failed", error);
         setIsEvaluating(false);
-    } finally {
-        // 🔥 3. STOP LOADING
+      } finally {
         setIsEvaluating(false);
+        setProgress(100)
         console.log('stopped')
     }
   };
@@ -509,6 +509,7 @@ export default function ProblemForm({problem, submissionData}:{problem?:ProblemD
                   className="min-h-[20%] shadow-xl rounded-xl overflow-hidden ring-1 ring-gray-900/5 pb-2"
                 >
                   <CodeEditorPanel
+                    progress={submisionPorgress}
                     code={codevaleCurrent?.code || ""}
                     language={codevaleCurrent?.language || "cpp"}
                     beforeMount={handleEditorWillMount}
