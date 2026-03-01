@@ -40,12 +40,14 @@ model Problem {
   testCase     String
   inputs       Json
   output       String
+  constestId   String?
   difficulty   Difficulty
   creator      User             @relation("CreatedBy", fields: [createdBy], references: [id])
   user         User             @relation(fields: [userId], references: [id])
   starterCodes StartCode[]
   submission   Submission[]
   UserSubmission   UserSubmission[]
+  contestLinker    ContestToProblem[]
 }
 
 model Language {
@@ -85,6 +87,26 @@ model Submission {
   user            User             @relation(fields: [userId], references: [id])
 }
 
+model  Contest{
+  id          String  @id @default(cuid())
+  startTime   DateTime
+  endTime     DateTime
+  title       String
+  description String
+  status      ContestStatus @default(UPCOMING)
+  participant Int @default(0)
+  contestLinker    ContestToProblem[]
+}
+
+model ContestToProblem{
+  problemId String 
+  problem Problem @relation(fields: [problemId], references: [id])
+  contestId String
+  contest Contest @relation(fields: [contestId], references: [id])
+
+  problemPoint Int
+  @@id([problemId, contestId])
+}
 model UserSubmission {
   id              String           @id @default(cuid())
   userId          String
@@ -120,6 +142,11 @@ model TestCases {
 enum Role {
   USER
   ADMIN
+}
+enum ContestStatus {
+  UPCOMING
+  ENDED
+  ACTIVE
 }
 
 enum Languages {
