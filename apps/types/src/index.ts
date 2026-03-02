@@ -210,3 +210,12 @@ export interface SubmissionData {
   code:string ,
   language:string
 }
+
+export interface ContestPayload {
+  title : string,
+  description: string,
+  startTime: string, 
+  endTime: string, 
+  isPublic: boolean, 
+problems: {id:string, points:number}[]
+}
