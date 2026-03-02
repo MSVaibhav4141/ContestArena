@@ -47,7 +47,7 @@ model Problem {
   starterCodes StartCode[]
   submission   Submission[]
   UserSubmission   UserSubmission[]
-  contestLinker    ContestToProblem[]
+  contests    ContestToProblem[]
 }
 
 model Language {
@@ -95,7 +95,7 @@ model  Contest{
   description String
   status      ContestStatus @default(UPCOMING)
   participant Int @default(0)
-  contestLinker    ContestToProblem[]
+  problems    ContestToProblem[]
 }
 
 model ContestToProblem{
