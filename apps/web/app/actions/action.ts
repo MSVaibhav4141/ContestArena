@@ -8,7 +8,9 @@ import {
 } from "@repo/generateboilerplate";
 import { auth } from "../../auth";
 import axios from "axios";
+import { revalidatePath } from "next/cache";
 import {
+  ContestPayload,
   InputParam,
   OutputParams,
   ProblemData,
@@ -347,4 +349,180 @@ export async function getUserSubmission({problemId, userId}:{problemId:string, u
   })
 
   return submission
+}
+
+
+export async function updateUserRole(userId: string, newRole: "ADMIN" | "USER") {
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { role: newRole },
+    });
+    
+    revalidatePath("/admin/users"); 
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update role:", error);
+    return { success: false, error: "Failed to update role" };
+  }
+}
+
+export async function deleteUser(userId: string) {
+  try {
+    await prisma.user.delete({
+      where: { id: userId },
+    });
+    
+    revalidatePath("/admin/users");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete user:", error);
+    return { success: false, error: "Failed to delete user" };
+  }
+}
+
+export async function createContest({title, description, startTime, endTime, isPublic, problems}:ContestPayload){
+
+  const contest = await prisma.contest.create({
+    data:{
+      title,
+      description,
+      startTime:new Date(startTime),
+      endTime: new Date(endTime),
+      problems:{
+        create: problems.map(i => {
+          return {
+            problemPoint: i.points,
+            problemId: i.id
+          }
+        })
+      }
+    }
+  })
+
+  revalidatePath("/admin/contests"); 
+
+  return {
+    msg:"CONT CREATED",
+    success:true
+  }
+}
+
+export async function searchProblems(query: string,state:'PENDING'|'ACCEPTED'| 'REJECTED'): Promise<{id:string, title:string, difficulty:string}[]> {
+  if (!query || query.length < 2) return [];
+
+  try {
+    const problems = await prisma.problem.findMany({
+      where: {
+        title: {
+          contains: query,
+          mode: 'insensitive', 
+        },
+        isApproved:state    
+        },
+      select: {
+        id: true,
+        title: true,
+        difficulty: true,
+      },
+      take: 10, 
+    });
+    console.log(problems)
+    return problems;
+  } catch (error) {
+    console.error("Search error:", error);
+    return [];
+  }
+}
+
+
+export async function deleteContest(contestId: string) {
+  try {
+    await prisma.$transaction([
+      prisma.contestToProblem.deleteMany({
+        where: { contestId: contestId }
+      }),
+      prisma.contest.delete({
+        where: { id: contestId }
+      })
+    ]);
+
+    revalidatePath("/admin/contests");
+    return { success: true };
+
+  } catch (error) {
+    console.error("Failed to delete contest:", error);
+    return { success: false, error: "Failed to delete contest. It may have active participants." };
+  }
+}
+
+export async function updateContestStatus(contestId: string, newStatus: 'UPCOMING' | 'ACTIVE' | 'ENDED') {
+  try {
+    await prisma.contest.update({
+      where: { id: contestId },
+      data: { status: newStatus }
+    });
+
+    revalidatePath("/admin/contests");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update status:", error);
+    return { success: false, error: "Failed to update contest status." };
+  }
+}
+
+export async function updatePorblemStatus({problemId , status}:{problemId:string, status: "PENDING"|"ACCEPTED"|"REJECTED"}){
+  try{
+
+    await prisma.problem.update({
+      where:{
+        id:problemId
+      },
+      data:{
+        isApproved:status
+      }
+    })
+    
+    revalidatePath("/admin/approvals")
+    return {succes:true}
+  }catch(e){
+    return { success: false, error: "Failed to update problem status." };
+  }
+}
+
+export async function deleteProblem(problemId: string) {
+  try {
+    await prisma.$transaction([
+      prisma.problem.deleteMany({ where: { id:problemId } }),
+      prisma.problem.delete({ where: { id: problemId } })
+    ]);
+
+    revalidatePath("/admin/problems");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete problem:", error);
+    return { success: false, error: "Failed to delete problem. It may be heavily linked." };
+  }
+}
+
+export async function updateProblem(
+  problemId: string, 
+  data: { title: string; difficulty: string; status: string }
+) {
+  try {
+    await prisma.problem.update({
+      where: { id: problemId },
+      data: {
+        title: data.title,
+        difficulty: data.difficulty as any, 
+        isApproved: data.status as any, 
+      }
+    });
+
+    revalidatePath("/admin/problems");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update problem:", error);
+    return { success: false, error: "Failed to save changes." };
+  }
 }
