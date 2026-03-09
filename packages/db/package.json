@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -18,13 +19,15 @@
   },
   "exports": {
     "./prisma": "./src/index.ts",
-    "./queue": "./src/queue.ts"
+    "./queue": "./src/queue.ts",
+    "./redis": "./src/redis.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
     "bullmq": "^5.69.2",
     "dotenv": "^17.2.3",
+    "ioredis": "^5.10.0",
     "pg": "^8.17.1"
   }
 }

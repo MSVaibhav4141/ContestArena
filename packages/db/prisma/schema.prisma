@@ -24,6 +24,7 @@ model User {
   problemId       Problem[]
   submission      Submission[]
   userSubmission  UserSubmission[]
+  registered      ContestRegistration[]
 }
 
 model Problem {
@@ -96,6 +97,11 @@ model  Contest{
   status      ContestStatus @default(UPCOMING)
   participant Int @default(0)
   problems    ContestToProblem[]
+  registrations ContestRegistration[]
+  userSubmission UserSubmission[]
+  createdAt DateTime @default(now())
+  updatedAt       DateTime     @updatedAt
+
 }
 
 model ContestToProblem{
@@ -121,6 +127,8 @@ model UserSubmission {
   memoryTaken     Int?             @default(0)
   timeTaken       Float?           @default(0)
   code            String
+  contestId       String?          
+  contest         Contest?         @relation(fields: [contestId], references: [id])
   language        Language         @relation(fields: [languageId], references: [id])
   problem         Problem          @relation(fields: [problemId], references: [id])
   user            User             @relation(fields: [userId], references: [id])
@@ -138,6 +146,19 @@ model TestCases {
   status       SubmissionStatus @default(PENDING)
   submissions  UserSubmission       @relation(fields: [submissionId], references: [id])
 }
+
+model ContestRegistration {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  contestId String
+  contest   Contest  @relation(fields: [contestId], references: [id])
+  createdAt DateTime @default(now())
+
+  // Ensure a user can only register once per contest
+  @@unique([userId, contestId]) 
+}
+
 
 enum Role {
   USER

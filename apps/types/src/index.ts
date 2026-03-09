@@ -219,3 +219,73 @@ export interface ContestPayload {
   isPublic: boolean, 
 problems: {id:string, points:number}[]
 }
+export interface UpdateContestPayload {
+  title: string;
+  description: string;
+  startTime: string;
+  endTime: string;
+  problems: {
+    id: string;
+    points: number;
+  }[];
+}
+
+export interface updatedContest{
+  success:boolean,
+  contest?:{
+    id: string;
+    startTime: Date;
+    endTime: Date;
+    title: string;
+    description: string;
+    status: 'UPCOMING' | 'ACTIVE' | 'ENDED';
+    participant: number;
+  }
+  error?:string
+    
+}
+export interface LinkedProblem {
+  problemId: string;
+  problemPoint: number;
+  problem: {
+    id: string;
+    title: string;
+    difficulty: "EASY" | "MEDIUM" | "HARD" | string;
+  };
+}
+
+export interface Contest {
+  id: string;
+  title: string;
+  description: string;
+  startTime: Date | string; 
+  endTime: Date | string;
+  status: "UPCOMING" | "ACTIVE" | "ENDED" | string;
+  participants: number;
+  problems?: LinkedProblem[]; 
+}
+
+export interface ContestManagerProps {
+  initialData: Contest[];
+}
+
+export interface ContestTableProps {
+  contests: Contest[];
+  onEdit: (contest: Contest) => void;
+  onDelete: (id: string) => void;
+}
+export interface ContestFormPanelProps {
+  isOpen: boolean;
+  onClose: () => void;
+  contestData: Contest | null; 
+}
+
+export interface LinkedProblem {
+  problemId: string;
+  problemPoint: number;
+  problem: {
+    id: string;
+    title: string;
+    difficulty: string;
+  };
+}
