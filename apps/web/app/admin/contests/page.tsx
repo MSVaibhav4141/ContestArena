@@ -1,18 +1,37 @@
 import { prisma } from "@repo/db/prisma";
 import ContestManager from "./components/ContestManager";
+import { getStatus } from "../../helper/helperFunction";
 
 export default async function ContestsPage() {
-  
-  
-  const contests = await prisma.contest.findMany()
-  // 2. Format dates and data for the Client Component
-  const formattedContests = contests.map((c:any) => ({
+  const contests = await prisma.contest.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      problems: {
+        include: {
+          problem: {
+            select: {
+              id: true,
+              title: true,
+              difficulty: true,
+            }
+          }
+        }
+      }
+    }
+  });
+
+  const formattedContests = contests.map((c) => ({
     id: c.id,
     title: c.title,
-    status: c.status, // e.g., 'UPCOMING', 'ACTIVE', 'ENDED'
-    startTime: c.startTime.toLocaleString(),
-    endTime: c.endTime.toLocaleString(),
-    participants: c.participant,
+    description: c.description,
+    status: getStatus(c.startTime, c.endTime),
+    
+    startTime: c.startTime.toISOString(), 
+    endTime: c.endTime.toISOString(),
+    
+    participants: c.participant || 0, 
+    
+    problems: c.problems, 
   }));
 
   return (

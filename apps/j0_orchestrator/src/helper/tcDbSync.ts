@@ -2,7 +2,8 @@ const MAX_DB_KB = 150;
 import { prisma } from "@repo/db/prisma";
 import { J0ResponseType, TestCase } from "@repo/types";
 import { uploadToS3 } from "./uploadS3";
-
+import {redis} from '@repo/db/redis'
+import { updateLeaderboard } from "./leaderboard";
 
 type Payload = J0ResponseType['submissions'];
 type TestCaseResult = {
@@ -36,6 +37,8 @@ export const outputGenerator = async(codeResult: Payload, tokenWithTcUid:{isHidd
             err = Buffer.from(rawError,'base64').toString('utf-8')
             status = "REJECTED"
         }
+
+
         return {
             id:uuidForToken?.id ?? "",
             input: Buffer.from(i.stdin ?? "", 'base64').toString('utf-8'),
@@ -80,7 +83,7 @@ export const outputGenerator = async(codeResult: Payload, tokenWithTcUid:{isHidd
 
 }
 
-export const resultChecker = async(coderesult: Payload, visisbleTcWithId:(Omit<TestCase,"output"> & {token:string})[],submissionId:string) =>{
+export const resultChecker = async(coderesult: Payload, visisbleTcWithId:(Omit<TestCase,"output"> & {token:string})[],submissionId:string, contestId?:string) =>{
     let totalAcceptedTc = 0;
     
 
@@ -94,8 +97,7 @@ export const resultChecker = async(coderesult: Payload, visisbleTcWithId:(Omit<T
     })
 
     const totalRejectedTc = coderesult.length - totalAcceptedTc
-    
-    await prisma.userSubmission.update({
+    const submission  = await prisma.userSubmission.update({
         where:{
             id:submissionId
         },
@@ -104,8 +106,39 @@ export const resultChecker = async(coderesult: Payload, visisbleTcWithId:(Omit<T
             totalCorrectTc:totalAcceptedTc,
             totalRejectedTc,
             status: totalRejectedTc ? "REJECTED" : "ACCEPTED"
-        }
+        },
+        include: {
+        user: {
+        select: {
+        id: true,
+        name: true
+      }
+    }}
     })
+    
+    console.log(totalRejectedTc, contestId)
+    
+    if(totalRejectedTc === 0 && contestId){
+        console.log(totalRejectedTc, contestId, 'from inside')
+        const solvedSetKey = `contest:${contestId}:user:${submission.userId}:solvedProblems`;
+        const added = await redis.sadd(solvedSetKey, submission.problemId);
+
+if (added === 1) {
+
+  const solvedKey = `contest:${contestId}:user:${submission.userId}:solved`;
+
+  const solved = await redis.incr(solvedKey);
+
+  await updateLeaderboard(
+    contestId,
+    submission.userId,
+    solved,
+    submission.user.name
+  );
+    }
+    
+
+}
 }
 // export const outputGenerator = async(codeResult: Payload, submissionId:string, isPublic:number, stdIn:string) => {
     
