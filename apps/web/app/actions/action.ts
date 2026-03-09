@@ -18,8 +18,11 @@ import {
   Structure,
   StructureParams,
   TestCase,
+  UpdateContestPayload,
+  updatedContest,
 } from "@repo/types";
 import { createSlug } from "./helpers/helper";
+import { redis } from "@repo/db/redis";
 
 
 export async function createProblemAction(formData: Structure) {
@@ -267,7 +270,7 @@ export async function getSubmissionById({id, userId}: { id?: string , userId?: s
   }
 }
 
-export async function userSubmission({code, problemId, language, inputs, name, output}:{code:string, problemId:string,language:'cpp'|'javascript'|'rust', inputs: InputParam[], name:string,output:OutputParams}){
+export async function userSubmission({code, problemId, language, inputs, name, output, contestId}:{code:string, problemId:string,language:'cpp'|'javascript'|'rust', inputs: InputParam[], name:string,output:OutputParams,contestId?:string}){
 
   const session = await auth()
   const user = session?.user.id
@@ -291,6 +294,7 @@ export async function userSubmission({code, problemId, language, inputs, name, o
                 ? 3
                 : 1,
         code: String(code),
+        contestId: contestId 
       },
   })
 
@@ -318,8 +322,9 @@ export async function userSubmission({code, problemId, language, inputs, name, o
   const queuePayload = {
     code:fullCode,
     problemId,
-    language_id:54, //fix this,
-    submissionId:submission.id
+    language_id: language === 'cpp' ? 54 : (language === 'javascript'? 109 : 41), 
+    submissionId:submission.id,
+    contestId
   }
   const userQueue = queue('user-queue')
   userQueue.on('error', (e) => {
@@ -331,14 +336,16 @@ export async function userSubmission({code, problemId, language, inputs, name, o
   return {subId: submission.id, jobId: job.id}
 }
 
-export async function getUserSubmission({problemId, userId}:{problemId:string, userId:string}){
+export async function getUserSubmission({problemId, userId,contestId}:{problemId:string, userId:string, contestId?:string}){
+  console.log(problemId, userId)
   const submission = await prisma.userSubmission.findMany({
     where:{
       problemId,
       userId,
       status:{
         not:"PENDING"
-      }
+      },
+      contestId:contestId ?? null
     },
     select:{
       totalCorrectTc:true,
@@ -524,5 +531,82 @@ export async function updateProblem(
   } catch (error) {
     console.error("Failed to update problem:", error);
     return { success: false, error: "Failed to save changes." };
+  }
+}
+
+export async function registerForContest(contestId: string, userId: string) {
+  try {
+    const contest = await prisma.contest.findUnique({ where: { id: contestId } });
+    if (!contest) return { success: false, error: "Contest not found." };
+
+    const now = new Date();
+
+    if (now > contest.endTime) {
+      return { success: false, error: "Registration is closed. Contest has ended." };
+    }
+
+    const result = await prisma.$transaction([
+      prisma.contestRegistration.create({
+        data: { contestId, userId },
+        include:{
+          user:{
+            select:{
+              name:true
+            }
+          }
+        }
+      }),
+      prisma.contest.update({
+        where: { id: contestId },
+        data: { participant: { increment: 1 } },
+      })
+    ]);
+    const username = result[0].user.name
+    const userKey = `contest:${contestId}:users`;
+    await redis.hset(userKey, userId,username )
+    revalidatePath(`/contests/${contestId}`);
+    return { success: true };
+
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      return { success: false, error: "You are already registered." };
+    }
+    return { success: false, error: "Failed to register." };
+  }
+}
+
+export async function updateContest(contestId: string, payload: UpdateContestPayload):Promise<updatedContest> {
+  try {
+    const startTime = new Date(payload.startTime);
+    const endTime = new Date(payload.endTime);
+
+    const updatedContest = await prisma.contest.update({
+      where: { 
+        id: contestId 
+      },
+      data: {
+        title: payload.title,
+        description: payload.description,
+        startTime,
+        endTime,        
+        problems: {
+          deleteMany: {}, 
+            create: payload.problems.map((p) => ({
+            problemId: p.id,
+            problemPoint: p.points,
+          })),
+        },
+      },
+    });
+
+    revalidatePath("/admin/contests");
+    revalidatePath(`/contests/${contestId}`);
+    revalidatePath("/contests"); 
+
+    return { success: true, contest: updatedContest };
+
+  } catch (error) {
+    console.error("Failed to update contest:", error);
+    return { success: false, error: "Failed to update contest. Please check the logs." };
   }
 }
