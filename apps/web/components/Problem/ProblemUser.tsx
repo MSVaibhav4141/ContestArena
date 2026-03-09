@@ -15,10 +15,14 @@ export interface UserWorkspaceProps {
       totalRejectedTc:number,
       code:string,
       outputInline:any
-    }[] | []
+    }[] | [],
+    serverTimeOnLoad?:string , 
+    contestEndTime?:string,
+    contestId?:string,
+    isRegistered:boolean
 }
 
-export default function ProblemWorkspace({ problem,submission }: UserWorkspaceProps) {
+export default function ProblemWorkspace({ problem,submission, serverTimeOnLoad, contestEndTime,contestId, isRegistered }: UserWorkspaceProps) {
     //Some prechecks
 
     if(!(problem.starterCodes[0])){
@@ -26,6 +30,9 @@ export default function ProblemWorkspace({ problem,submission }: UserWorkspacePr
         return;
     }
 
+
+  const [timeLeft, setTimeLeft] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<"description" | "submissions">("description");
   const [codevale, setCodeVal] = useState(problem.starterCodes) ;
   const [submissions, setSubmission] = useState<UserWorkspaceProps['submission']>(submission ?? [])
@@ -89,17 +96,18 @@ export default function ProblemWorkspace({ problem,submission }: UserWorkspacePr
 
   // --- Actions ---
   const handleRunCode = async () => {
+    if (isRegistered === false) return;
       setIsExecuting(true);
-      // TODO: Call your user-execution API here (running against public test cases)
       console.log("Running code:", codeCurrent);
       setTimeout(() => setIsExecuting(false), 2000); // Mock delay
   };
 
+
   const handleSubmitCode = async () => {
+    if (isRegistered === false) return;
       setIsExecuting(true);
-      // TODO: Call your final submission API here (running against hidden test cases)
       console.log("Submitting code:", codeCurrent);
-      const {subId, jobId} = await userSubmission({code:codeCurrent.code, problemId: problem.id, language:codeCurrent.language, inputs: problem.inputs, name:problem.title, output :problem.output})
+      const {subId, jobId} = await userSubmission({code:codeCurrent.code, problemId: problem.id, language:codeCurrent.language, inputs: problem.inputs, name:problem.title, output :problem.output, contestId:contestId})
 
       if(!subId || !jobId){
         alert("No ids recived")
@@ -120,10 +128,58 @@ export default function ProblemWorkspace({ problem,submission }: UserWorkspacePr
             
         }finally{
           setProgress(100)
-
+          setIsExecuting(false)
       }
         
     };
+
+    useEffect(() => {
+    if (!contestEndTime || !serverTimeOnLoad) return;
+
+    const clientTimeOnLoad = Date.now();
+    const serverTimeMs = new Date(serverTimeOnLoad).getTime();
+    const clockOffset = serverTimeMs - clientTimeOnLoad; 
+
+    const target = new Date(contestEndTime).getTime();
+
+    const interval = setInterval(async () => {
+      const realNow = Date.now() + clockOffset;
+      const difference = target - realNow;
+
+      if (difference <= 0) {
+        clearInterval(interval);
+        setTimeLeft("00:00:00");
+        
+        if (!isSubmitting) {
+          handleAutoSubmit();
+        }
+        return;
+      }
+
+      const h = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const m = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((difference % (1000 * 60)) / 1000);
+      setTimeLeft(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`);
+      
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [contestEndTime, serverTimeOnLoad]);
+
+  const handleAutoSubmit = async () => {
+    setIsSubmitting(true);
+    alert("Time is up! Auto-submitting your code...");
+    
+    // Grab the latest code from the ref, not the state, to avoid closure staleness
+    const finalCode = codeCurrent; 
+    
+    await handleSubmitCode();
+    
+    // Redirect to leaderboard or show completion screen
+    window.location.href = `/contests/${contestId}/leaderboard`;
+  };
+
+
     console.log(submissionPorgress, 'progress')
   const handleEditorWillMount = (monaco: Monaco) => {
     monaco.languages.register({ id: "cpp" });
@@ -197,31 +253,50 @@ const formatOutput = (rawStr: string) => {
     try {
         const parsed = JSON.parse(rawStr);
 
-        // Check if it's a 2D array (like a Sudoku board)
         if (Array.isArray(parsed) && Array.isArray(parsed[0])) {
-            // Join each inner array into a single line string
             const rows = parsed.map(row => `  [${row.map((cell:any) => `"${cell}"`).join(", ")}]`);
             return `[\n${rows.join(",\n")}\n]`;
         }
 
-        // Fallback for standard objects/arrays
         return JSON.stringify(parsed, null, 2);
     } catch (e) {
-        // If it's not JSON (like a simple string or error), return as is
         return rawStr.trim();
     }
 };
 
+if (isRegistered === false) {
+    return (
+      <div className="h-full bg-[#0f0f0f] p-6 flex justify-center">
+        <div className="w-full max-w-4xl bg-[#1a1a1a] rounded-xl border border-gray-800 overflow-hidden flex flex-col shadow-2xl h-[calc(100vh-8rem)]">
+          <div className="flex items-center h-12 border-b border-gray-800 bg-[#242424] px-6">
+            <span className="text-gray-300 font-bold flex items-center gap-2">
+              📝 Problem Description
+            </span>
+          </div>
+          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <h1 className="text-3xl font-black text-white mb-6">{problem.title}</h1>
+            <div 
+              className="prose prose-invert max-w-none text-base text-gray-300 leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: problem.description }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
       <div className="min-h-screen bg-gray-100 overflow-hidden flex flex-col pt-6 px-6 pb-6">
-      
-      {/* Main Layout Container */}
+      {contestEndTime && (
+        <div className="bg-red-500/10 text-red-500 font-mono font-bold px-4 py-2 text-center border-b border-red-500/20">
+          Time Remaining: {timeLeft || "Calculating..."}
+        </div>
+      )}
       <div 
         ref={containerRef} 
         className="flex w-full h-[calc(100vh-1rem)] relative"
       >
         
-        {/* --- LEFT PANEL: Problem Description --- */}
         <div 
           style={{ width: `${leftPanelWidth}%` }} 
           className={`flex flex-col bg-[#1a1a1a] rounded-xl border border-gray-800 overflow-hidden ${!isDraggingH ? "transition-[width] duration-100" : ""}`}
@@ -246,7 +321,6 @@ const formatOutput = (rawStr: string) => {
               {activeTab === 'description' ? (
                   <div className="space-y-6">
                       <h1 className="text-2xl font-bold text-white">{problem.title}</h1>
-                      {/* Render HTML Description safely */}
                       <div 
                           className="prose prose-invert max-w-none text-sm text-gray-300"
                           dangerouslySetInnerHTML={{ __html: problem.description }}
@@ -479,15 +553,15 @@ const formatOutput = (rawStr: string) => {
             <div className="p-3 border-t border-gray-800 bg-[#1e1e1e] flex justify-end gap-3">
                 <button 
                     onClick={handleRunCode}
-                    disabled={isExecuting}
-                    className="flex items-center gap-2 px-5 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-medium transition disabled:opacity-50"
+                    disabled={isExecuting || !isRegistered }
+                    className="flex items-center gap-2 px-5 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed" // <-- Added disabled:cursor-not-allowed
                 >
                     <Play size={16} /> Run Code
                 </button>
                 <button 
                     onClick={handleSubmitCode}
-                    disabled={isExecuting}
-                    className="flex items-center gap-2 px-5 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition shadow-lg disabled:opacity-50"
+                    disabled={isExecuting || !isRegistered } 
+                    className="flex items-center gap-2 px-5 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" // <-- Added disabled:cursor-not-allowed
                 >
                     <Send size={16} /> Submit
                 </button>
