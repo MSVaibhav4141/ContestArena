@@ -20,7 +20,8 @@ ENV REDIS_URL=$REDIS_URL
 COPY --from=prepare /app/out/json .
 RUN pnpm install
 COPY --from=prepare /app/out/full/ .
-RUN pnpm exec prisma db push --skip-generate
+RUN npx prisma db push --schema=packages/db/prisma/schema.prisma --skip-generate
+RUN npx prisma generate --schema=packages/db/prisma/schema.prisma
 RUN pnpm turbo build 
 
 
