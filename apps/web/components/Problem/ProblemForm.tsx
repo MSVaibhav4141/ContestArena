@@ -1,9 +1,9 @@
 // app/problems/new/page.tsx
-import { ProblemData } from "@repo/types"
+import { ProblemData, SubmissionData } from "@repo/types"
 import ProblemForm from "./ProblemBuilder"
 
-export default function Page({problem}:{problem?:ProblemData}) {
+export default function Page({problem, submissionData}:{problem?:ProblemData, submissionData:SubmissionData}) {
   return (
-      <ProblemForm problem={problem}/>
+      <ProblemForm problem={problem} submissionData={submissionData}/>
   )
 }

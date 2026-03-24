@@ -107,11 +107,29 @@ export const J0TestSchema = z.object({
   source_code: z.string(),
   language_id: z.number(),
   stdin: z.string(),
-  expected_output: z.string()
 });
+const status = Array.from({ length: 14 }, (_, index) => z.literal(index + 1));
+export const J0Response = z.object({
+  submissions: z.array(
+    z.object({
+      stdout: z.string() || z.null(),
+      time: z.string() || z.null(),
+      memory: z.number() || z.null(),
+      stderr: z.null() || z.string(),
+      token: z.string(),
+      stdin:z.string(),
+      compile_output:  z.string() ,
+      message: z.string(),
+      status: z.object({
+          id: z.union(status),
+          description: z.string()
+      })
+    })
+  )
+})
 
 export interface ProblemSubmission {
-    submissionId:string
+  submissionId:string
 }
 // ---------------------------------------------------------
 // 3. INFERRED TYPES (The "Single Source of Truth")
@@ -127,6 +145,7 @@ export type BolierPateResponse = z.infer<typeof BolierPateResponseSchema>;
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 export type TestCase = z.infer<typeof TestCaseDraftSchema>;
 export type J0Test = z.infer<typeof J0TestSchema>;
+export type J0ResponseType = z.infer<typeof J0Response>
 
 // ---------------------------------------------------------
 // 4. REACT PROPS HANDLING
@@ -183,5 +202,90 @@ export interface ProblemData {
   createdBy: string;
   starterCodes: StarterCode[];
   inputs:InputParam[],
-  output: OutputParams
+  output: OutputParams,
+  difficulty:string
+}
+
+export interface SubmissionData {
+  code:string ,
+  language:string
+}
+
+export interface ContestPayload {
+  title : string,
+  description: string,
+  startTime: string, 
+  endTime: string, 
+  isPublic: boolean, 
+problems: {id:string, points:number}[]
+}
+export interface UpdateContestPayload {
+  title: string;
+  description: string;
+  startTime: string;
+  endTime: string;
+  problems: {
+    id: string;
+    points: number;
+  }[];
+}
+
+export interface updatedContest{
+  success:boolean,
+  contest?:{
+    id: string;
+    startTime: Date;
+    endTime: Date;
+    title: string;
+    description: string;
+    status: 'UPCOMING' | 'ACTIVE' | 'ENDED';
+    participant: number;
+  }
+  error?:string
+    
+}
+export interface LinkedProblem {
+  problemId: string;
+  problemPoint: number;
+  problem: {
+    id: string;
+    title: string;
+    difficulty: "EASY" | "MEDIUM" | "HARD" | string;
+  };
+}
+
+export interface Contest {
+  id: string;
+  title: string;
+  description: string;
+  startTime: Date | string; 
+  endTime: Date | string;
+  status: "UPCOMING" | "ACTIVE" | "ENDED" | string;
+  participants: number;
+  problems?: LinkedProblem[]; 
+}
+
+export interface ContestManagerProps {
+  initialData: Contest[];
+}
+
+export interface ContestTableProps {
+  contests: Contest[];
+  onEdit: (contest: Contest) => void;
+  onDelete: (id: string) => void;
+}
+export interface ContestFormPanelProps {
+  isOpen: boolean;
+  onClose: () => void;
+  contestData: Contest | null; 
+}
+
+export interface LinkedProblem {
+  problemId: string;
+  problemPoint: number;
+  problem: {
+    id: string;
+    title: string;
+    difficulty: string;
+  };
 }

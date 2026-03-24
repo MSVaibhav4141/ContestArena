@@ -4,6 +4,8 @@ generator client {
   generatedFileExtension = "ts"
   importFileExtension    = "ts"
   moduleFormat           = "esm"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+
 }
 
 datasource db {
@@ -23,27 +25,32 @@ model User {
   createdProblems Problem[]    @relation("CreatedBy")
   problemId       Problem[]
   submission      Submission[]
+  userSubmission  UserSubmission[]
+  registered      ContestRegistration[]
 }
 
 model Problem {
-  id           String       @id @unique @default(cuid())
+  id           String           @id @unique @default(cuid())
   title        String
   description  String
   slug         String
   userId       String
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
   createdBy    String
-  hidden       Boolean      @default(false)
+  hidden       Boolean          @default(false)
   isApproved   SubmissionStatus @default(PENDING)
   testCase     String
   inputs       Json
   output       String
+  constestId   String?
   difficulty   Difficulty
-  creator      User         @relation("CreatedBy", fields: [createdBy], references: [id])
-  user         User         @relation(fields: [userId], references: [id])
+  creator      User             @relation("CreatedBy", fields: [createdBy], references: [id])
+  user         User             @relation(fields: [userId], references: [id])
   starterCodes StartCode[]
   submission   Submission[]
+  UserSubmission   UserSubmission[]
+  contests    ContestToProblem[]
 }
 
 model Language {
@@ -51,6 +58,7 @@ model Language {
   langauage  Languages
   startCode  StartCode[]
   Submission Submission[]
+  UserSubmission UserSubmission[]
 }
 
 model StartCode {
@@ -63,37 +71,105 @@ model StartCode {
 }
 
 model Submission {
-  id          String           @id @default(cuid())
-  userId      String
-  problemId   String
-  languageId  Int
-  status      SubmissionStatus @default(PENDING)
-  createdAt   DateTime         @default(now())
-  memoryTaken Int?             @default(0)
-  timeTaken   Float?           @default(0)
-  code        String
-  language    Language         @relation(fields: [languageId], references: [id])
-  problem     Problem          @relation(fields: [problemId], references: [id])
-  user        User             @relation(fields: [userId], references: [id])
-  testcases   TestCases[]
+  id              String           @id @default(cuid())
+  userId          String
+  problemId       String           @unique
+  languageId      Int
+  totalCorrectTc  Int @default(0)
+  totalRejectedTc Int @default(0)
+  outputInline    Json?
+  s3URL           String?
+  error           String?
+  status          SubmissionStatus @default(PENDING)
+  createdAt       DateTime         @default(now())
+  memoryTaken     Int?             @default(0)
+  timeTaken       Float?           @default(0)
+  code            String
+  language        Language         @relation(fields: [languageId], references: [id])
+  problem         Problem          @relation(fields: [problemId], references: [id])
+  user            User             @relation(fields: [userId], references: [id])
 }
 
+model  Contest{
+  id          String  @id @default(cuid())
+  startTime   DateTime
+  endTime     DateTime
+  title       String
+  description String
+  status      ContestStatus @default(UPCOMING)
+  participant Int @default(0)
+  problems    ContestToProblem[]
+  registrations ContestRegistration[]
+  userSubmission UserSubmission[]
+  createdAt DateTime @default(now())
+  updatedAt       DateTime     @updatedAt
+
+}
+
+model ContestToProblem{
+  problemId String 
+  problem Problem @relation(fields: [problemId], references: [id])
+  contestId String
+  contest Contest @relation(fields: [contestId], references: [id])
+
+  problemPoint Int
+  @@id([problemId, contestId])
+}
+model UserSubmission {
+  id              String           @id @default(cuid())
+  userId          String
+  problemId       String           
+  languageId      Int
+  totalCorrectTc  Int @default(0)
+  totalRejectedTc Int @default(0)
+  outputInline    Json?
+  error           String?
+  status          SubmissionStatus @default(PENDING)
+  createdAt       DateTime         @default(now())
+  memoryTaken     Int?             @default(0)
+  timeTaken       Float?           @default(0)
+  code            String
+  contestId       String?          
+  contest         Contest?         @relation(fields: [contestId], references: [id])
+  language        Language         @relation(fields: [languageId], references: [id])
+  problem         Problem          @relation(fields: [problemId], references: [id])
+  user            User             @relation(fields: [userId], references: [id])
+  testcases       TestCases[]
+}
 model TestCases {
-  id           String           @id 
+  id           String           @id
   submissionId String
   identity     String
   input        String
   output       String
   memoryTaken  Int?
-  isHidden     Boolean @default(false)
+  isHidden     Boolean          @default(false)
   timeTaken    Float?
   status       SubmissionStatus @default(PENDING)
-  submissions  Submission       @relation(fields: [submissionId], references: [id])
+  submissions  UserSubmission       @relation(fields: [submissionId], references: [id])
 }
+
+model ContestRegistration {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  contestId String
+  contest   Contest  @relation(fields: [contestId], references: [id])
+  createdAt DateTime @default(now())
+
+  // Ensure a user can only register once per contest
+  @@unique([userId, contestId]) 
+}
+
 
 enum Role {
   USER
   ADMIN
+}
+enum ContestStatus {
+  UPCOMING
+  ENDED
+  ACTIVE
 }
 
 enum Languages {
