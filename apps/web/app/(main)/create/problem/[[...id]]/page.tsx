@@ -1,9 +1,9 @@
 import { redirect, notFound } from "next/navigation"; // FIX: Added notFound for better Next.js 404 handling
-import FormShell from "../../../../components/Problem/ProblemForm";
-import { getProblemById, getSubmissionById, getUserSubmission } from "../../../actions/action";
-import { auth } from "../../../../auth";
+import FormShell from "../../../../../components/Problem/ProblemForm";
+import { getProblemById, getSubmissionById, getUserSubmission } from "../../../../actions/action";
+import { auth } from "../../../../../auth";
 import { SubmissionData } from "@repo/types";
-import ProblemWorkspace from "../../../../components/Problem/ProblemUser";
+import ProblemWorkspace from "../../../../../components/Problem/ProblemUser";
 import { prisma } from "@repo/db/prisma";
 import { ChevronLeft, ShieldAlert, AlertTriangle } from "lucide-react"; // FIX: Added AlertTriangle for the banner
 import Link from "next/link";

@@ -44,14 +44,15 @@
       },
 
         async jwt({ token, user }) {
-        if (user?.email) {
+        if (token?.email){
           const dbUser = await prisma.user.findUnique({
-            where: { email: user.email },
+            where: { email: token.email },
           })
 
           if (dbUser) {
             token.id = dbUser.id
             token.role = dbUser.role
+            token.picture = dbUser.image;
           }
         }
 
@@ -62,6 +63,7 @@
         if (session.user) {
           session.user.id = token.id as string
           session.user.role = token.role as string
+          session.user.image = token.picture as string; 
         }
         
         return session

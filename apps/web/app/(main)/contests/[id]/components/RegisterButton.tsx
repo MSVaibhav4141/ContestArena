@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { registerForContest } from "../../../actions/action";
+import { registerForContest } from "../../../../actions/action";
 import { CheckCircle } from "lucide-react";
 
 export default function RegisterButton({ contestId, userId, isRegistered }: { contestId: string, userId: string, isRegistered: boolean }) {

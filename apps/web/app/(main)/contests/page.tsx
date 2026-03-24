@@ -1,6 +1,6 @@
 import { prisma } from "@repo/db/prisma";
 import ContestExplorer from "./components/ContestTabs";
-import { getStatus } from "../helper/helperFunction";
+import { getStatus } from "../../helper/helperFunction";
 
 export default async function ContestsPage() {
   const contests = await prisma.contest.findMany({
