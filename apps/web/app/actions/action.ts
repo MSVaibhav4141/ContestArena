@@ -100,7 +100,11 @@ export async function createProblemAction(formData: Structure) {
         }),
       });
     }
-  });
+  },{
+    maxWait: 5000, 
+  timeout: 10000
+  }
+);
 
   // 🔥 Replace with DB save
   return { startCode, problemId };
@@ -179,6 +183,9 @@ export async function submitTestCases(code: any) {
       },
     });
     return id;
+  },{
+    maxWait: 5000, 
+  timeout: 10000
   });
 
     const queuePayload = {

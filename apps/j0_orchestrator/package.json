@@ -1,5 +1,5 @@
 {
-  "name": "@repo/j0_orchestrator",
+  "name": "orchestrator",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",

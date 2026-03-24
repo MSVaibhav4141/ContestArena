@@ -4,6 +4,8 @@ generator client {
   generatedFileExtension = "ts"
   importFileExtension    = "ts"
   moduleFormat           = "esm"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+
 }
 
 datasource db {

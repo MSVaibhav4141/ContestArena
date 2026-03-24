@@ -76,7 +76,7 @@ async function sendRequestWithRetry({J0URL,chunk}:{J0URL:string, chunk:J0Payload
 
     return data;
   }catch(e:any){
-    console.log("Worker error")
+    console.log("Worker error",e)
     if(e.response.status == 503){
       if(retries > 5){
         console.log('All retries are exhausted')
@@ -234,6 +234,9 @@ const checkerWorker = new Worker(
     connection: {
     host:process.env.QUEUE_HOST,
     port:Number(process.env.QUEUE_PORT),
+    username: 'default',
+  password: process.env.QUEUE_PASSWORD,
+  tls: {},
     enableReadyCheck:false,
     maxRetriesPerRequest:null
 },
@@ -357,6 +360,9 @@ const setterWorker = new Worker(
     connection: {
     host:process.env.QUEUE_HOST,
     port:Number(process.env.QUEUE_PORT),
+    username: 'default',
+  password: process.env.QUEUE_PASSWORD,
+  tls: {},
     enableReadyCheck:false,
     maxRetriesPerRequest:null
 },

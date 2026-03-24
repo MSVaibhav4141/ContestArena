@@ -37,3 +37,4 @@ export default async function ContestsPage() {
     </div>
   );
 }
+export const dynamic = 'force-dynamic'; 

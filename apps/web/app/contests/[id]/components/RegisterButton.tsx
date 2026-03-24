@@ -47,3 +47,5 @@ export default function RegisterButton({ contestId, userId, isRegistered }: { co
     </button>
   );
 }
+
+export const dynamic = 'force-dynamic';

@@ -69,3 +69,5 @@ export default async function LeaderboardPage({
   </div>
 );
 }
+export const dynamic = 'force-dynamic';
+

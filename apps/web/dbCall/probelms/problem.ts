@@ -52,50 +52,53 @@ export type Problem = {
   pathToCode: string;
 };
 
-const addQuestion = async(payload: Problem) => {
+// const addQuestion = async(payload: Problem) => {
   
-}
-const addQuestionForReview = async (payload: Problem) => {
-  //add cecks logic
+// }
+// const addQuestionForReview = async (payload: Problem) => {
+//   //add cecks logic
 
-  //Storting the default code
+//   //Storting the default code
 
-  const defaultCode = await readFiles(payload.pathToCode);
+//   const defaultCode = await readFiles(payload.pathToCode);
 
-  //Carefull for mapping
-try{
- await prisma.$transaction(async (prismaTx) => {
-    const problem = await prismaTx.problem.create({
-    data: {
-      title: payload.title,
-      description: payload.description,
-      slug: payload.slug,
-      userId: payload.userId,
-      createdBy: payload.userId,
-      difficulty: payload.difficulty,
-    },
-  });
+//   //Carefull for mapping
+// try{
+//  await prisma.$transaction(async (prismaTx) => {
+//     const problem = await prismaTx.problem.create({
+//     data: {
+//       title: payload.title,
+//       description: payload.description,
+//       slug: payload.slug,
+//       userId: payload.userId,
+//       createdBy: payload.userId,
+//       difficulty: payload.difficulty,
+//       testCase:"",
+//       inputs:'',
+//       output:""
+//     },
+//   });
 
-   await prismaTx.startCode.createMany({
-  data: files.map((i, k) => ({
-    problemId: problem.id,
-    languageId: i.code,
-    code: defaultCode[k] ?? "",
-  }))
-});
-  })
-  return true;
-}catch(e){
-  return false;
-}
-};
+//    await prismaTx.startCode.createMany({
+//   data: files.map((i, k) => ({
+//     problemId: problem.id,
+//     languageId: i.code,
+//     code: defaultCode[k] ?? "",
+//   }))
+// });
+//   })
+//   return true;
+// }catch(e){
+//   return false;
+// }
+// };
 
 
-const readFiles = async (path: string) => {
-  const contents = await Promise.all(
-    files.map((i) => readFile(join(path, i.fileName), "utf-8")),
-  );
+// const readFiles = async (path: string) => {
+//   const contents = await Promise.all(
+//     files.map((i) => readFile(join(path, i.fileName), "utf-8")),
+//   );
 
-  return contents;
-  console.log(contents);
-};
+//   return contents;
+//   console.log(contents);
+// };

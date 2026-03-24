@@ -1,0 +1,49 @@
+name: Deploy ContestArena
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Web
+        run: |
+          docker build -f apps/web/Dockerfile \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/lc-web:${{ github.sha }} \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/lc-web:latest .
+          docker push -a ${{ secrets.DOCKERHUB_USERNAME }}/lc-web
+
+      - name: Build and Push WS
+        run: |
+          docker build -f apps/ws/Dockerfile \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/lc-ws:${{ github.sha }} \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/lc-ws:latest .
+          docker push -a ${{ secrets.DOCKERHUB_USERNAME }}/lc-ws
+
+      - name: Build and Push Worker
+        run: |
+          docker build -f apps/j0orchestrator/Dockerfile \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/lc-worker:${{ github.sha }} \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/lc-worker:latest .
+          docker push -a ${{ secrets.DOCKERHUB_USERNAME }}/lc-worker
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            bash /home/ubuntu/contestarena/deploy.sh ${{ github.sha }}
