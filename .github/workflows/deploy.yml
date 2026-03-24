@@ -29,14 +29,14 @@ jobs:
 
       - name: Build and Push WS
         run: |
-          docker build -f apps/ws/Dockerfile \
+          docker build -f apps/wsServer/Dockerfile \
             -t ${{ secrets.DOCKERHUB_USERNAME }}/lc-ws:${{ github.sha }} \
             -t ${{ secrets.DOCKERHUB_USERNAME }}/lc-ws:latest .
           docker push -a ${{ secrets.DOCKERHUB_USERNAME }}/lc-ws
 
       - name: Build and Push Worker
         run: |
-          docker build -f apps/j0orchestrator/Dockerfile \
+          docker build -f apps/j0_orchestrator/Dockerfile \
             -t ${{ secrets.DOCKERHUB_USERNAME }}/lc-worker:${{ github.sha }} \
             -t ${{ secrets.DOCKERHUB_USERNAME }}/lc-worker:latest .
           docker push -a ${{ secrets.DOCKERHUB_USERNAME }}/lc-worker
