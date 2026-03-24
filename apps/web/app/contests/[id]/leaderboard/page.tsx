@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { redis } from "@repo/db/redis";
 import LeaderboardClient from "./component/LeaderBoardClient";
 import { Trophy } from "lucide-react";
@@ -69,5 +70,4 @@ export default async function LeaderboardPage({
   </div>
 );
 }
-export const dynamic = 'force-dynamic';
 

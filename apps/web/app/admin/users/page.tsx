@@ -1,4 +1,5 @@
-    import { prisma } from "@repo/db/prisma";
+export const dynamic = 'force-dynamic';
+import { prisma } from "@repo/db/prisma";
 import UserManager from "./components/UserManager";
 
 export default async function UsersPage() {
