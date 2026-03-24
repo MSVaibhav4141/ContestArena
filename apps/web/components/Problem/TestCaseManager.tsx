@@ -35,6 +35,13 @@ interface Props {
 }
 
 const ITEMS_PER_PAGE = 50;
+export function generateId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
 
 export default function TestCaseManager({ params, cases, tcResult, setCases, isEvaluating = false }: Props) {
   // State for Form Inputs
@@ -95,7 +102,7 @@ export default function TestCaseManager({ params, cases, tcResult, setCases, isE
     const finalInputString = inputValues.map(v => v.trim()).join('\n');
 
     const newCase: TestCase = {
-      id: editingId ?? crypto.randomUUID(),
+      id: editingId ?? generateId(),
       input: finalInputString,
       output: "", 
       isHidden
@@ -122,7 +129,7 @@ export default function TestCaseManager({ params, cases, tcResult, setCases, isE
           const rawCases = text.split(/\n\s*\n/).filter(c => c.trim() !== "");
           
           const newCases: TestCase[] = rawCases.map((rc, idx) => ({
-              id: crypto.randomUUID(),
+              id: generateId(),
               input: rc.trim(),
               output: "", 
               isHidden: cases.length + idx > 2 
