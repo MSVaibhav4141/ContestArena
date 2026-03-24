@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'; 
 import { prisma } from "@repo/db/prisma";
 import ContestManager from "./components/ContestManager";
 import { getStatus } from "../../helper/helperFunction";
@@ -46,4 +47,3 @@ export default async function ContestsPage() {
   );
 }
 
-export const dynamic = 'force-dynamic'; 

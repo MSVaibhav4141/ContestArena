@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'; 
 import { prisma } from "@repo/db/prisma";
 import { Users, Trophy, FileCode2, CheckCircle, Plus, UserRoundCheck } from 'lucide-react';
 import Link from "next/link";
@@ -115,5 +116,3 @@ export default async function AdminDashboardPage() {
     </div>
   );
 }
-
-export const dynamic = 'force-dynamic'; 

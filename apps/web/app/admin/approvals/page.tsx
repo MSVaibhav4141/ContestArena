@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { prisma } from "@repo/db/prisma";
 import ReviewManager from "../approvals/components/ReviewManager";
 
@@ -36,5 +38,3 @@ export default async function ApprovalsPage() {
     </div>
   );
 }
-
-export const dynamic = 'force-dynamic';
