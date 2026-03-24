@@ -16,11 +16,7 @@ FROM base AS builder
 COPY --from=prepare /app/out/json .
 RUN pnpm install
 COPY --from=prepare /app/out/full/ .
-RUN --mount=type=secret,id=database_url \
-    --mount=type=secret,id=redis_url \
-    DATABASE_URL=$(cat /run/secrets/database_url) \
-    REDIS_URL=$(cat /run/secrets/redis_url) \
-    pnpm turbo build
+RUN pnpm turbo build 
 
 FROM base AS runner
 RUN apk add --no-cache ca-certificates  
