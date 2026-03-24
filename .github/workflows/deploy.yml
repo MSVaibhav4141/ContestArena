@@ -7,21 +7,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: tempuser
-          POSTGRES_PASSWORD: temppassword
-          POSTGRES_DB: tempdb
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    
 
     steps:
       - name: Checkout code
@@ -36,9 +22,13 @@ jobs:
       - name: Build and Push Web
         run: |
           docker build -f apps/web/Dockerfile \
+            --secret id=database_url,env=DATABASE_URL \
+            --secret id=redis_url,env=REDIS_URL \
             -t ${{ secrets.DOCKERHUB_USERNAME }}/lc-web:${{ github.sha }} \
             -t ${{ secrets.DOCKERHUB_USERNAME }}/lc-web:latest .
-          docker push -a ${{ secrets.DOCKERHUB_USERNAME }}/lc-web
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}  
+          REDIS_URL: ${{ secrets.REDIS_URL }}
 
       - name: Build and Push WS
         run: |

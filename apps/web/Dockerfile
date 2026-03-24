@@ -13,17 +13,14 @@ COPY . .
 RUN turbo prune web --docker
 
 FROM base AS builder
-ARG DATABASE_URL
-ARG REDIS_URL
-ENV DATABASE_URL=$DATABASE_URL
-ENV REDIS_URL=$REDIS_URL
 COPY --from=prepare /app/out/json .
 RUN pnpm install
 COPY --from=prepare /app/out/full/ .
-RUN npx prisma db push --schema=packages/db/prisma/schema.prisma --skip-generate
-RUN npx prisma generate --schema=packages/db/prisma/schema.prisma
-RUN pnpm turbo build 
-
+RUN --mount=type=secret,id=database_url \
+    --mount=type=secret,id=redis_url \
+    DATABASE_URL=$(cat /run/secrets/database_url) \
+    REDIS_URL=$(cat /run/secrets/redis_url) \
+    pnpm turbo build
 
 FROM base AS runner
 RUN apk add --no-cache ca-certificates  

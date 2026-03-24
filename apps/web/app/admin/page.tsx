@@ -116,3 +116,4 @@ export default async function AdminDashboardPage() {
   );
 }
 
+export const dynamic = 'force-dynamic'; 
