@@ -22,13 +22,10 @@ jobs:
       - name: Build and Push Web
         run: |
           docker build -f apps/web/Dockerfile \
-            --secret id=database_url,env=DATABASE_URL \
-            --secret id=redis_url,env=REDIS_URL \
             -t ${{ secrets.DOCKERHUB_USERNAME }}/lc-web:${{ github.sha }} \
             -t ${{ secrets.DOCKERHUB_USERNAME }}/lc-web:latest .
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}  
-          REDIS_URL: ${{ secrets.REDIS_URL }}
+          docker push -a ${{ secrets.DOCKERHUB_USERNAME }}/lc-web
+   
 
       - name: Build and Push WS
         run: |
