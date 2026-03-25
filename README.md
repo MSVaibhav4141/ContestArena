@@ -1,135 +1,65 @@
-# Turborepo starter
+# ContestArena
 
-This Turborepo starter is maintained by the Turborepo core team.
+ContestArena is a high-performance, self-hosted competitive programming platform. It provides real-time code judging, live contest management, and low-latency leaderboards. The platform is built to handle heavy concurrent workloads, executing and validating up to 1000+ test cases per submission through a custom distributed remote code execution (RCE) engine.
 
-## Using this example
+<img width="1833" height="848" alt="image" src="https://github.com/user-attachments/assets/2a00b7e9-81ec-4b48-ab5e-7bd94529c29d" />  
+*Landing page showcasing the platform's core offering.*
 
-Run the following command:
+## Core Features
 
-```sh
-npx create-turbo@latest
-```
+* **Self-Hosted Job Orchestrator (j0):** A custom execution engine that securely compiles and runs user code against large(1000+) test suites.
+* **Real-Time Live Arena:** Low-latency contest timelines and leaderboards powered by WebSockets and Redis Pub/Sub.
+* **Interactive Coding Workspace:** Integrated Monaco Editor with a resizable split-pane layout, live console outputs, and multi-language support.
+* **Granular Access Control:** Atomic state management for contest timelines, ensuring problem sets remain securely locked until the exact start time.
+* **Enterprise-Grade UI:** A highly polished, accessible dark-mode interface built with Tailwind CSS and Framer Motion.
 
-## What's inside?
+## System Architecture
 
-This Turborepo includes the following packages/apps:
+ContestArena's backend is designed to handle the primary bottleneck of competitive programming platforms: validating massive test case objects safely and quickly.
 
-### Apps and Packages
+### The j0 Orchestrator & Testcase Chunking
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+<img width="2636" height="1348" alt="image" src="https://github.com/user-attachments/assets/00035c48-ed87-42ca-9797-700a7360a047" />
+*Internal flow of the j0 orchestrator and worker processes.*
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+Sending monolithic string payloads for 1000+ test cases to an execution worker is memory-intensive and prone to timeouts. Instead, ContestArena uses a dynamic chunking architecture:
+1. **Queueing:** Submissions enter the `j0` Orchestrator Queue.
+2. **Memory & Storage:** The worker process checks if the required test cases are in memory. If not, it fetches them from AWS S3 (for large payloads) or the primary database (for small payloads based on `SET_SIZE`).
+3. **Chunking & Load Balancing:** The test case object is chunked into smaller batches (e.g., 10 to 100 cases per chunk, depending on the target worker's CPU constraints). 
+4. **Distributed Execution:** A load balancer distributes these chunks across multiple `j0server` batch workers for parallel execution.
 
-### Utilities
+### Submission & Real-Time Polling Flow
 
-This Turborepo has some additional tools already setup for you:
+<img width="1827" height="713" alt="image" src="https://github.com/user-attachments/assets/6e61ba17-5622-43fc-9ead-12e6567c689b" />
+*Code submission, schema generation, and polling lifecycle.*
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+To provide a seamless UX during code execution, the platform utilizes a hybrid polling mechanism:
+* When a user submits code, a schema is created and the full execution code is generated and queued.
+* The frontend immediately initiates a fast-polling cycle against a high-speed Redis Cache rather than hammering the primary database.
+* Once the progress reaches 100%, the system performs a final fetch from the database or S3 to retrieve the persistent, verified results and updates the frontend state.
 
-### Build
+## Application Interfaces
 
-To build all apps and packages, run the following command:
+### Interactive Code Workspace
+The workspace is designed for deep focus, utilizing an A/B split layout. The left pane houses the problem description and submission history, while the right pane contains the Monaco code editor, language selector, and execution console.
 
-```
-cd my-turborepo
+<img width="1838" height="838" alt="Screenshot 2026-03-25 210726" src="https://github.com/user-attachments/assets/9029408a-6bf6-46d7-be3e-e5e1a738d1b9" />
 
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
+### Live Leaderboard
+Rankings are updated dynamically as participants successfully pass test cases. The leaderboard utilizes WebSocket connections to ensure all connected clients view the same persistent state during an active contest.
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
-```
+<img width="1866" height="763" alt="Screenshot 2026-03-25 210854" src="https://github.com/user-attachments/assets/b6c16225-c186-4bfd-a8a1-c27767c1870f" />
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+### Admin OS
+The platform includes a restricted-access administration portal. It provides real-time telemetry on active contests, total submissions, user growth, and features a dedicated queue for approving or rejecting community-submitted coding problems.
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+<img width="1860" height="744" alt="Screenshot 2026-03-25 212100" src="https://github.com/user-attachments/assets/62fa6778-b976-46a7-8b97-8bd11b4f0172" />
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+## Tech Stack
+* **Frontend:** Next.js, React, Tailwind CSS, Framer Motion
+* **Architecture:** Monorepo(Turborepo)
+* **Editor:** Monaco Editor
+* **Backend:** Next.js Server Actions, Node.js (for j0 orchestrator workers)
+* **Database:** PostgreSQL with Prisma ORM
+* **Caching & Real-Time:** Redis (Pub/Sub)
+* **Cloud & Security:** AWS S3 (Blob storage), AWS IAM (Role-based access), AWS SSM (Parameter Store for secure credentials)
